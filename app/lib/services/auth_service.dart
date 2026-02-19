@@ -18,6 +18,7 @@ class AuthService {
     required String username,
     required String fullName,
     required String phone,
+    required String role, // 'customer' or 'seller'
   }) async {
     try {
       // Create user account
@@ -32,6 +33,7 @@ class AuthService {
         'username': username,
         'phone': phone,
         'email': email,
+        'role': role,
         'createdAt': FieldValue.serverTimestamp(),
       });
 

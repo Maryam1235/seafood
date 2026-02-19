@@ -20,6 +20,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  String _selectedRole = 'customer'; // Default role
 
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
@@ -43,6 +44,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         username: _usernameController.text.trim(),
         fullName: _fullNameController.text.trim(),
         phone: _phoneController.text.trim(),
+        role: _selectedRole,
       );
 
       // Logout immediately after registration
@@ -120,6 +122,50 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         ),
                         const SizedBox(height: 32),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Select Account Type',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              RadioListTile<String>(
+                                title: const Text('Customer'),
+                                subtitle: const Text('Buy seafood products'),
+                                value: 'customer',
+                                groupValue: _selectedRole,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedRole = value!;
+                                  });
+                                },
+                              ),
+                              RadioListTile<String>(
+                                title: const Text('Seafood Seller'),
+                                subtitle: const Text('Sell seafood products'),
+                                value: 'seller',
+                                groupValue: _selectedRole,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedRole = value!;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
                         TextFormField(
                           controller: _fullNameController,
                           decoration: InputDecoration(
