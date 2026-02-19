@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:data_table_2/data_table_2.dart';
+import 'users_management_screen.dart';
+import 'dashboard_home_screen.dart';
+import 'settings_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -11,181 +12,99 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  String _searchQuery = '';
+  int _selectedIndex = 0;
+
+  final List<Widget> _screens = [
+    const DashboardHomeScreen(),
+    const UsersManagementScreen(),
+    const SettingsScreen(),
+  ];
 
   Future<void> _logout() async {
     await FirebaseAuth.instance.signOut();
   }
 
-  Future<void> _deleteUser(String userId) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete User'),
-        content: const Text('Are you sure you want to delete this user?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      try {
-        await _firestore.collection('users').doc(userId).delete();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('User deleted successfully')),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error: ${e.toString()}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Admin Dashboard'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _logout,
-            tooltip: 'Logout',
-          ),
-        ],
-      ),
-      body: Column(
+      body: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            color: Colors.grey.shade100,
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Search by name, email, or phone...',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      filled: true,
-                      fillColor: Colors.white,
+          // Sidebar
+          NavigationRail(
+            extended: MediaQuery.of(context).size.width > 800,
+            backgroundColor: Colors.indigo.shade700,
+            selectedIconTheme: const IconThemeData(color: Colors.white),
+            unselectedIconTheme: IconThemeData(color: Colors.indigo.shade200),
+            selectedLabelTextStyle: const TextStyle(color: Colors.white),
+            unselectedLabelTextStyle: TextStyle(color: Colors.indigo.shade200),
+            leading: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  CircleAvatar(
+                    radius: 30,
+                    backgroundColor: Colors.white,
+                    child: Icon(
+                      Icons.admin_panel_settings,
+                      size: 35,
+                      color: Colors.indigo.shade700,
                     ),
-                    onChanged: (value) {
-                      setState(() {
-                        _searchQuery = value.toLowerCase();
-                      });
-                    },
+                  ),
+                  if (MediaQuery.of(context).size.width > 800) ...[
+                    const SizedBox(height: 12),
+                    const Text(
+                      'ZanSeafood',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const Text(
+                      'Admin Panel',
+                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            destinations: const [
+              NavigationRailDestination(
+                icon: Icon(Icons.dashboard),
+                label: Text('Dashboard'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.people),
+                label: Text('Users'),
+              ),
+              NavigationRailDestination(
+                icon: Icon(Icons.settings),
+                label: Text('Settings'),
+              ),
+            ],
+            selectedIndex: _selectedIndex,
+            onDestinationSelected: (index) {
+              setState(() {
+                _selectedIndex = index;
+              });
+            },
+            trailing: Expanded(
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 20.0),
+                  child: IconButton(
+                    icon: const Icon(Icons.logout, color: Colors.white),
+                    onPressed: _logout,
+                    tooltip: 'Logout',
                   ),
                 ),
-              ],
+              ),
             ),
           ),
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: _firestore.collection('users').snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
-
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                final users = snapshot.data!.docs.where((doc) {
-                  if (_searchQuery.isEmpty) return true;
-
-                  final data = doc.data() as Map<String, dynamic>;
-                  final fullName = (data['fullName'] ?? '')
-                      .toString()
-                      .toLowerCase();
-                  final email = (data['email'] ?? '').toString().toLowerCase();
-                  final phone = (data['phone'] ?? '').toString().toLowerCase();
-                  final username = (data['username'] ?? '')
-                      .toString()
-                      .toLowerCase();
-
-                  return fullName.contains(_searchQuery) ||
-                      email.contains(_searchQuery) ||
-                      phone.contains(_searchQuery) ||
-                      username.contains(_searchQuery);
-                }).toList();
-
-                if (users.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      'No users found',
-                      style: TextStyle(fontSize: 18),
-                    ),
-                  );
-                }
-
-                return Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: DataTable2(
-                    columnSpacing: 12,
-                    horizontalMargin: 12,
-                    minWidth: 900,
-                    columns: const [
-                      DataColumn2(label: Text('Full Name'), size: ColumnSize.L),
-                      DataColumn2(label: Text('Username')),
-                      DataColumn2(label: Text('Email'), size: ColumnSize.L),
-                      DataColumn2(label: Text('Phone')),
-                      DataColumn2(label: Text('Created'), size: ColumnSize.S),
-                      DataColumn2(label: Text('Actions'), size: ColumnSize.S),
-                    ],
-                    rows: users.map((doc) {
-                      final data = doc.data() as Map<String, dynamic>;
-                      final createdAt = data['createdAt'] as Timestamp?;
-
-                      return DataRow2(
-                        cells: [
-                          DataCell(Text(data['fullName'] ?? 'N/A')),
-                          DataCell(Text(data['username'] ?? 'N/A')),
-                          DataCell(Text(data['email'] ?? 'N/A')),
-                          DataCell(Text(data['phone'] ?? 'N/A')),
-                          DataCell(
-                            Text(
-                              createdAt != null
-                                  ? '${createdAt.toDate().day}/${createdAt.toDate().month}/${createdAt.toDate().year}'
-                                  : 'N/A',
-                            ),
-                          ),
-                          DataCell(
-                            IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () => _deleteUser(doc.id),
-                              tooltip: 'Delete User',
-                            ),
-                          ),
-                        ],
-                      );
-                    }).toList(),
-                  ),
-                );
-              },
-            ),
-          ),
+          const VerticalDivider(thickness: 1, width: 1),
+          // Main content
+          Expanded(child: _screens[_selectedIndex]),
         ],
       ),
     );
