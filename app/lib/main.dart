@@ -19,7 +19,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Seafood App',
+      title: 'ZanSeafood',
       theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
       home: const AuthCheck(),
       debugShowCheckedModeBanner: false,
