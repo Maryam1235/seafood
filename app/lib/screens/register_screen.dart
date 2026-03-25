@@ -162,6 +162,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   });
                                 },
                               ),
+                              RadioListTile<String>(
+                                title: const Text('Driver'),
+                                subtitle: const Text('Deliver seafood orders'),
+                                value: 'driver',
+                                groupValue: _selectedRole,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedRole = value!;
+                                  });
+                                },
+                              ),
                             ],
                           ),
                         ),

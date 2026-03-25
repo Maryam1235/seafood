@@ -91,7 +91,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
                 const SizedBox(width: 16),
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    value: _roleFilter,
+                    initialValue: _roleFilter,
                     decoration: InputDecoration(
                       labelText: 'Filter by Role',
                       border: OutlineInputBorder(
@@ -102,8 +102,12 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
                     ),
                     items: const [
                       DropdownMenuItem(value: 'all', child: Text('All Users')),
-                      DropdownMenuItem(value: 'customer', child: Text('Customers')),
+                      DropdownMenuItem(
+                        value: 'customer',
+                        child: Text('Customers'),
+                      ),
                       DropdownMenuItem(value: 'seller', child: Text('Sellers')),
+                      DropdownMenuItem(value: 'driver', child: Text('Drivers')),
                     ],
                     onChanged: (value) {
                       setState(() {
@@ -129,20 +133,24 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
 
                 final users = snapshot.data!.docs.where((doc) {
                   final data = doc.data() as Map<String, dynamic>;
-                  
+
                   // Role filter
                   if (_roleFilter != 'all' && data['role'] != _roleFilter) {
                     return false;
                   }
-                  
+
                   // Search filter
                   if (_searchQuery.isEmpty) return true;
-                  
-                  final fullName = (data['fullName'] ?? '').toString().toLowerCase();
+
+                  final fullName = (data['fullName'] ?? '')
+                      .toString()
+                      .toLowerCase();
                   final email = (data['email'] ?? '').toString().toLowerCase();
                   final phone = (data['phone'] ?? '').toString().toLowerCase();
-                  final username = (data['username'] ?? '').toString().toLowerCase();
-                  
+                  final username = (data['username'] ?? '')
+                      .toString()
+                      .toLowerCase();
+
                   return fullName.contains(_searchQuery) ||
                       email.contains(_searchQuery) ||
                       phone.contains(_searchQuery) ||
@@ -177,7 +185,7 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
                       final data = doc.data() as Map<String, dynamic>;
                       final createdAt = data['createdAt'] as Timestamp?;
                       final role = data['role'] ?? 'customer';
-                      
+
                       return DataRow2(
                         cells: [
                           DataCell(Text(data['fullName'] ?? 'N/A')),
@@ -195,15 +203,21 @@ class _UsersManagementScreenState extends State<UsersManagementScreen> {
                               ),
                               backgroundColor: role == 'seller'
                                   ? Colors.orange.shade100
+                                  : role == 'driver'
+                                  ? Colors.teal.shade100
                                   : Colors.blue.shade100,
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                              ),
                             ),
                           ),
-                          DataCell(Text(
-                            createdAt != null
-                                ? '${createdAt.toDate().day}/${createdAt.toDate().month}/${createdAt.toDate().year}'
-                                : 'N/A',
-                          )),
+                          DataCell(
+                            Text(
+                              createdAt != null
+                                  ? '${createdAt.toDate().day}/${createdAt.toDate().month}/${createdAt.toDate().year}'
+                                  : 'N/A',
+                            ),
+                          ),
                           DataCell(
                             IconButton(
                               icon: const Icon(Icons.delete, color: Colors.red),

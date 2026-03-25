@@ -46,11 +46,16 @@ class DashboardHomeScreen extends StatelessWidget {
                   return data['role'] == 'seller';
                 }).length;
 
+                final drivers = users.where((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  return data['role'] == 'driver';
+                }).length;
+
                 return GridView.count(
                   shrinkWrap: true,
                   crossAxisCount: MediaQuery.of(context).size.width > 800
-                      ? 3
-                      : 1,
+                      ? 4
+                      : 2,
                   mainAxisSpacing: 16,
                   crossAxisSpacing: 16,
                   childAspectRatio: 2.5,
@@ -72,6 +77,12 @@ class DashboardHomeScreen extends StatelessWidget {
                       value: sellers.toString(),
                       icon: Icons.store,
                       color: Colors.orange,
+                    ),
+                    _buildStatCard(
+                      title: 'Drivers',
+                      value: drivers.toString(),
+                      icon: Icons.delivery_dining,
+                      color: Colors.teal,
                     ),
                   ],
                 );

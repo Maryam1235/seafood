@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'screens/login_screen.dart';
 import 'screens/customer_dashboard.dart';
 import 'screens/seller_dashboard.dart';
+import 'screens/driver_dashboard.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -61,6 +62,8 @@ class AuthCheck extends StatelessWidget {
 
                 if (role == 'seller') {
                   return const SellerDashboard();
+                } else if (role == 'driver') {
+                  return const DriverDashboard();
                 } else {
                   return const CustomerDashboard();
                 }
