@@ -23,11 +23,13 @@ const roleColor  = { customer: '#1d4ed8', seller: '#b45309', driver: '#065f46' }
 const emptyForm = { fullName: '', username: '', email: '', phone: '', password: '', role: 'customer' };
 
 export default function UsersTable() {
-  const [users, setUsers]         = useState([]);
-  const [search, setSearch]       = useState('');
+  const [users, setUsers]           = useState([]);
+  const [search, setSearch]         = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
-  const [showModal, setShowModal] = useState(false);
-  const [form, setForm]           = useState(emptyForm);
+  const [showModal, setShowModal]   = useState(false);
+  const [viewUser, setViewUser]     = useState(null);
+  const [editUser, setEditUser]     = useState(null);
+  const [form, setForm]             = useState(emptyForm);
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState('');
 
@@ -41,6 +43,27 @@ export default function UsersTable() {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       await deleteDoc(doc(db, 'users', id));
+    }
+  };
+
+  const handleEditSave = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      await setDoc(doc(db, 'users', editUser.id), {
+        fullName: editUser.fullName,
+        username: editUser.username,
+        email: editUser.email,
+        phone: editUser.phone,
+        role: editUser.role,
+        createdAt: editUser.createdAt,
+      });
+      setEditUser(null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -131,7 +154,16 @@ export default function UsersTable() {
                   : u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}
                 </td>
                 <td>
-                  <button className={styles.deleteBtn} onClick={() => handleDelete(u.id)}>🗑 Delete</button>
+                  <div className={styles.actions}>
+                    <button className={styles.viewBtn} onClick={() => setViewUser(u)} title="View">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    </button>
+                    <button className={styles.editBtn} onClick={() => setEditUser({...u})} title="Edit">✏️</button>
+                    <button className={styles.deleteBtn} onClick={() => handleDelete(u.id)} title="Delete">🗑</button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -183,6 +215,84 @@ export default function UsersTable() {
                 <button type="button" className={styles.cancelBtn} onClick={() => setShowModal(false)}>Cancel</button>
                 <button type="submit" className={styles.submitBtn} disabled={loading}>
                   {loading ? 'Creating...' : 'Create User'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* View User Modal */}
+      {viewUser && (
+        <div className={styles.overlay} onClick={() => setViewUser(null)}>
+          <div className={styles.modal} onClick={e => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3>User Details</h3>
+              <button className={styles.closeBtn} onClick={() => setViewUser(null)}>✕</button>
+            </div>
+            <div className={styles.viewGrid}>
+              {[
+                ['Full Name', viewUser.fullName],
+                ['Username', viewUser.username],
+                ['Email', viewUser.email],
+                ['Phone', viewUser.phone],
+                ['Role', viewUser.role?.toUpperCase()],
+                ['Created', viewUser.createdAt?.seconds
+                  ? new Date(viewUser.createdAt.seconds * 1000).toLocaleDateString()
+                  : 'N/A'],
+              ].map(([label, value]) => (
+                <div key={label} className={styles.viewRow}>
+                  <span className={styles.viewLabel}>{label}</span>
+                  <span className={styles.viewValue}>{value || 'N/A'}</span>
+                </div>
+              ))}
+            </div>
+            <div className={styles.modalFooter}>
+              <button className={styles.cancelBtn} onClick={() => setViewUser(null)}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit User Modal */}
+      {editUser && (
+        <div className={styles.overlay} onClick={() => setEditUser(null)}>
+          <div className={styles.modal} onClick={e => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3>Edit User</h3>
+              <button className={styles.closeBtn} onClick={() => setEditUser(null)}>✕</button>
+            </div>
+            <form onSubmit={handleEditSave}>
+              {error && <div className={styles.error}>{error}</div>}
+              <div className={styles.formGrid}>
+                <div className={styles.field}>
+                  <label>Full Name</label>
+                  <input required value={editUser.fullName || ''} onChange={e => setEditUser({...editUser, fullName: e.target.value})} />
+                </div>
+                <div className={styles.field}>
+                  <label>Username</label>
+                  <input required value={editUser.username || ''} onChange={e => setEditUser({...editUser, username: e.target.value})} />
+                </div>
+                <div className={styles.field}>
+                  <label>Email</label>
+                  <input value={editUser.email || ''} disabled className={styles.disabled} />
+                </div>
+                <div className={styles.field}>
+                  <label>Phone</label>
+                  <input required value={editUser.phone || ''} onChange={e => setEditUser({...editUser, phone: e.target.value})} />
+                </div>
+                <div className={styles.field}>
+                  <label>Role</label>
+                  <select value={editUser.role || 'customer'} onChange={e => setEditUser({...editUser, role: e.target.value})}>
+                    <option value="customer">Customer</option>
+                    <option value="seller">Seller</option>
+                    <option value="driver">Driver</option>
+                  </select>
+                </div>
+              </div>
+              <div className={styles.modalFooter}>
+                <button type="button" className={styles.cancelBtn} onClick={() => setEditUser(null)}>Cancel</button>
+                <button type="submit" className={styles.submitBtn} disabled={loading}>
+                  {loading ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             </form>

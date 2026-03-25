@@ -214,3 +214,38 @@
   margin-bottom: 16px;
   font-size: 13px;
 }
+
+.actions { display: flex; gap: 6px; align-items: center; }
+
+.viewBtn, .editBtn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 6px;
+  transition: background 0.2s;
+  width: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #4f46e5;
+}
+
+.viewBtn:hover { background: #dbeafe; color: #1d4ed8; }
+.editBtn:hover { background: #fef3c7; }
+
+.viewGrid { display: flex; flex-direction: column; gap: 0; margin-bottom: 24px; }
+
+.viewRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 14px;
+}
+
+.viewLabel { color: #6b7280; font-weight: 500; }
+.viewValue { color: #111827; font-weight: 600; }
+
+.disabled { background: #f9fafb; color: #9ca3af; cursor: not-allowed; }
