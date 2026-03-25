@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Sidebar from '../components/Sidebar';
+import TopHeader from '../components/TopHeader';
 import Overview from '../components/Overview';
 import UsersTable from '../components/UsersTable';
 import Settings from '../components/Settings';
@@ -9,7 +10,8 @@ import styles from './Dashboard.module.css';
 
 export default function Dashboard() {
   const [activePage, setActivePage] = useState('overview');
-  const [subPage, setSubPage]       = useState(null); // { type: 'add' } | { type: 'edit', user }
+  const [subPage, setSubPage]       = useState(null);
+  const [collapsed, setCollapsed]   = useState(false);
 
   const handleNav = (page) => {
     setActivePage(page);
@@ -17,12 +19,8 @@ export default function Dashboard() {
   };
 
   const renderContent = () => {
-    if (subPage?.type === 'add') {
-      return <AddUser onBack={() => setSubPage(null)} />;
-    }
-    if (subPage?.type === 'edit') {
-      return <EditUser user={subPage.user} onBack={() => setSubPage(null)} />;
-    }
+    if (subPage?.type === 'add') return <AddUser onBack={() => setSubPage(null)} />;
+    if (subPage?.type === 'edit') return <EditUser user={subPage.user} onBack={() => setSubPage(null)} />;
 
     switch (activePage) {
       case 'overview': return <Overview />;
@@ -38,10 +36,21 @@ export default function Dashboard() {
 
   return (
     <div className={styles.layout}>
-      <Sidebar activePage={activePage} setActivePage={handleNav} />
-      <main className={styles.main}>
-        {renderContent()}
-      </main>
+      <Sidebar
+        activePage={activePage}
+        setActivePage={handleNav}
+        collapsed={collapsed}
+      />
+      <div className={styles.content}>
+        <TopHeader
+          collapsed={collapsed}
+          setCollapsed={setCollapsed}
+          activePage={activePage}
+        />
+        <main className={styles.main}>
+          {renderContent()}
+        </main>
+      </div>
     </div>
   );
 }
