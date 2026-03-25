@@ -253,3 +253,26 @@
 .viewValue { color: #111827; font-weight: 600; }
 
 .disabled { background: #f9fafb; color: #9ca3af; cursor: not-allowed; }
+
+.statusBtn {
+  border: none;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  width: auto;
+}
+
+.statusBtn.active {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.statusBtn.inactive {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.statusBtn:hover { opacity: 0.8; }

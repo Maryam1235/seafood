@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, doc, deleteDoc, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, deleteDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { initializeApp } from 'firebase/app';
@@ -39,6 +39,12 @@ export default function UsersTable() {
     });
     return unsub;
   }, []);
+
+  const toggleStatus = async (id, currentStatus) => {
+    await updateDoc(doc(db, 'users', id), {
+      active: currentStatus === false ? true : false,
+    });
+  };
 
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
@@ -130,13 +136,14 @@ export default function UsersTable() {
             <tr>
               <th>Full Name</th>
               <th>Role</th>
+              <th>Status</th>
               <th>Created</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={4} className={styles.empty}>No users found</td></tr>
+              <tr><td colSpan={5} className={styles.empty}>No users found</td></tr>
             ) : filtered.map(u => (
               <tr key={u.id}>
                 <td>{u.fullName || 'N/A'}</td>
@@ -147,6 +154,14 @@ export default function UsersTable() {
                   }}>
                     {(u.role || 'N/A').toUpperCase()}
                   </span>
+                </td>
+                <td>
+                  <button
+                    className={`${styles.statusBtn} ${u.active === false ? styles.inactive : styles.active}`}
+                    onClick={() => toggleStatus(u.id, u.active)}
+                  >
+                    {u.active === false ? 'Inactive' : 'Active'}
+                  </button>
                 </td>
                 <td>{u.createdAt?.seconds
                   ? new Date(u.createdAt.seconds * 1000).toLocaleDateString()
