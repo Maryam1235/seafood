@@ -1,5 +1,8 @@
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
+import { useEffect, useState } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 import styles from './Sidebar.module.css';
 
 const navItems = [
@@ -9,6 +12,23 @@ const navItems = [
 ];
 
 export default function Sidebar({ activePage, setActivePage }) {
+  const [username, setUsername] = useState('');
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const user = auth.currentUser;
+      if (user) {
+        const snap = await getDoc(doc(db, 'users', user.uid));
+        if (snap.exists()) {
+          setUsername(snap.data().username || user.email);
+        } else {
+          setUsername(user.email);
+        }
+      }
+    };
+    fetchUser();
+  }, []);
+
   return (
     <aside className={styles.sidebar}>
       <div className={styles.brand}>
@@ -16,6 +36,16 @@ export default function Sidebar({ activePage, setActivePage }) {
         <div>
           <div className={styles.brandName}>ZanSeaFood</div>
           <div className={styles.brandSub}>Admin Panel</div>
+        </div>
+      </div>
+
+      <div className={styles.adminInfo}>
+        <div className={styles.adminAvatar}>
+          {username ? username.charAt(0).toUpperCase() : 'A'}
+        </div>
+        <div>
+          <div className={styles.adminName}>{username || 'Admin'}</div>
+          <div className={styles.adminRole}>Administrator</div>
         </div>
       </div>
 
