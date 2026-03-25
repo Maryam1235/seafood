@@ -22,6 +22,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscureConfirmPassword = true;
   String _selectedRole = 'customer'; // Default role
 
+  Widget _buildRoleButton(String role, String label) {
+    final isSelected = _selectedRole == role;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedRole = role),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.black87 : Colors.transparent,
+            borderRadius: BorderRadius.circular(50),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: isSelected ? Colors.white : Colors.grey.shade600,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -122,57 +148,18 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ),
                         ),
                         const SizedBox(height: 32),
+                        // Role selector - toggle button style
                         Container(
-                          padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade300),
+                            color: Colors.grey.shade200,
+                            borderRadius: BorderRadius.circular(50),
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          padding: const EdgeInsets.all(4),
+                          child: Row(
                             children: [
-                              const Text(
-                                'Select Account Type',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              RadioListTile<String>(
-                                title: const Text('Customer'),
-                                subtitle: const Text('Buy seafood products'),
-                                value: 'customer',
-                                groupValue: _selectedRole,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedRole = value!;
-                                  });
-                                },
-                              ),
-                              RadioListTile<String>(
-                                title: const Text('Seafood Seller'),
-                                subtitle: const Text('Sell seafood products'),
-                                value: 'seller',
-                                groupValue: _selectedRole,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedRole = value!;
-                                  });
-                                },
-                              ),
-                              RadioListTile<String>(
-                                title: const Text('Driver'),
-                                subtitle: const Text('Deliver seafood orders'),
-                                value: 'driver',
-                                groupValue: _selectedRole,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedRole = value!;
-                                  });
-                                },
-                              ),
+                              _buildRoleButton('customer', 'Customer'),
+                              _buildRoleButton('seller', 'Seller'),
+                              _buildRoleButton('driver', 'Driver'),
                             ],
                           ),
                         ),
