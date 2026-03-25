@@ -4,7 +4,7 @@ import styles from './Sidebar.module.css';
 
 const navItems = [
   { id: 'overview', label: 'Dashboard', icon: '📊' },
-  { id: 'users', label: 'Users', icon: '👥' },
+  { id: 'users', label: 'User Management', icon: '👥' },
   { id: 'settings', label: 'Settings', icon: '⚙️' },
 ];
 

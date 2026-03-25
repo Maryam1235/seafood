@@ -128,19 +128,18 @@ export default function UsersTable() {
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>Full Name</th><th>Username</th><th>Email</th>
-              <th>Phone</th><th>Role</th><th>Created</th><th>Actions</th>
+              <th>Full Name</th>
+              <th>Role</th>
+              <th>Created</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={7} className={styles.empty}>No users found</td></tr>
+              <tr><td colSpan={4} className={styles.empty}>No users found</td></tr>
             ) : filtered.map(u => (
               <tr key={u.id}>
                 <td>{u.fullName || 'N/A'}</td>
-                <td>{u.username || 'N/A'}</td>
-                <td>{u.email || 'N/A'}</td>
-                <td>{u.phone || 'N/A'}</td>
                 <td>
                   <span className={styles.badge} style={{
                     background: roleBadge[u.role] || '#f3f4f6',
