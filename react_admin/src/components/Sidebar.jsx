@@ -13,6 +13,7 @@ const navItems = [
 
 export default function Sidebar({ activePage, setActivePage, collapsed }) {
   const [username, setUsername] = useState('');
+  const [search, setSearch]     = useState('');
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -50,11 +51,25 @@ export default function Sidebar({ activePage, setActivePage, collapsed }) {
               <div className={styles.adminRole}>Administrator</div>
             </div>
           </div>
+
+          <div className={styles.searchBox}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            </svg>
+            <input
+              type="text"
+              placeholder="Search..."
+              className={styles.searchInput}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
         </>
       )}
 
       <nav className={styles.nav}>
-        {navItems.map((item) => (
+        {navItems
+          .filter(item => item.label.toLowerCase().includes(search.toLowerCase()))
+          .map((item) => (
           <button
             key={item.id}
             className={`${styles.navItem} ${activePage === item.id ? styles.active : ''}`}
