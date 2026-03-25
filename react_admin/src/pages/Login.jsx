@@ -26,7 +26,7 @@ export default function Login() {
     <div className={styles.container}>
       <div className={styles.card}>
         <div className={styles.logo}>
-          <span>🐟</span>
+          <img src="/zanseafoodlogo.png" alt="ZanSeaFood" style={{ width: 80, height: 80, objectFit: 'contain' }} />
           <h1>ZanSeaFood</h1>
           <p>Admin Dashboard</p>
         </div>

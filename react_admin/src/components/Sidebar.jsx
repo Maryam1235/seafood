@@ -12,7 +12,7 @@ export default function Sidebar({ activePage, setActivePage }) {
   return (
     <aside className={styles.sidebar}>
       <div className={styles.brand}>
-        <span className={styles.brandIcon}>🐟</span>
+        <img src="/zanseafoodlogo.png" alt="ZanSeaFood" className={styles.brandLogo} />
         <div>
           <div className={styles.brandName}>ZanSeaFood</div>
           <div className={styles.brandSub}>Admin Panel</div>

@@ -15,7 +15,12 @@
   margin-bottom: 32px;
 }
 
-.brandIcon { font-size: 36px; }
+.brandLogo {
+  width: 65px;
+  height: 65px;
+  object-fit: contain;
+  border-radius: 8px;
+}
 
 .brandName {
   color: white;

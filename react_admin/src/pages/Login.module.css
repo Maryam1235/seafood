@@ -20,7 +20,12 @@
   margin-bottom: 32px;
 }
 
-.logo span { font-size: 48px; }
+.logo img {
+  width: 90px;
+  height: 90px;
+  object-fit: contain;
+  border-radius: 12px;
+}
 
 .logo h1 {
   font-size: 28px;
