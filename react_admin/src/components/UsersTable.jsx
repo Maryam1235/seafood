@@ -1,37 +1,16 @@
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, doc, deleteDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
 import styles from './UsersTable.module.css';
-
-// Secondary app to create users without logging out admin
-const secondaryApp = initializeApp({
-  apiKey: 'AIzaSyDYYGj-PNS-P4jcMp00BN3EXzYKqZ-WGws',
-  authDomain: 'testing-bc269.firebaseapp.com',
-  projectId: 'testing-bc269',
-  storageBucket: 'testing-bc269.firebasestorage.app',
-  messagingSenderId: '471821678431',
-  appId: '1:471821678431:web:426ca40330b7c219c3e8ea',
-}, 'secondary');
-const secondaryAuth = getAuth(secondaryApp);
 
 const roleBadge = { customer: '#dbeafe', seller: '#fef3c7', driver: '#d1fae5' };
 const roleColor  = { customer: '#1d4ed8', seller: '#b45309', driver: '#065f46' };
 
-const emptyForm = { fullName: '', username: '', email: '', phone: '', password: '', role: 'customer' };
-
-export default function UsersTable() {
+export default function UsersTable({ onAddUser, onEditUser }) {
   const [users, setUsers]           = useState([]);
   const [search, setSearch]         = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
-  const [showModal, setShowModal]   = useState(false);
   const [viewUser, setViewUser]     = useState(null);
-  const [editUser, setEditUser]     = useState(null);
-  const [form, setForm]             = useState(emptyForm);
-  const [loading, setLoading]     = useState(false);
-  const [error, setError]         = useState('');
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'users'), (snap) => {
@@ -52,51 +31,6 @@ export default function UsersTable() {
     }
   };
 
-  const handleEditSave = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    try {
-      await setDoc(doc(db, 'users', editUser.id), {
-        fullName: editUser.fullName,
-        username: editUser.username,
-        email: editUser.email,
-        phone: editUser.phone,
-        role: editUser.role,
-        createdAt: editUser.createdAt,
-      });
-      setEditUser(null);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAddUser = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-    try {
-      const cred = await createUserWithEmailAndPassword(secondaryAuth, form.email, form.password);
-      await setDoc(doc(db, 'users', cred.user.uid), {
-        fullName: form.fullName,
-        username: form.username,
-        email: form.email,
-        phone: form.phone,
-        role: form.role,
-        createdAt: new Date(),
-      });
-      await secondaryAuth.signOut();
-      setShowModal(false);
-      setForm(emptyForm);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const filtered = users.filter(u => {
     const matchRole = roleFilter === 'all' || u.role === roleFilter;
     const q = search.toLowerCase();
@@ -112,7 +46,7 @@ export default function UsersTable() {
     <div>
       <div className={styles.header}>
         <h2 className={styles.title}>User Management</h2>
-        <button className={styles.addBtn} onClick={() => setShowModal(true)}>+ Add User</button>
+        <button className={styles.addBtn} onClick={onAddUser}>+ Add User</button>
       </div>
 
       <div className={styles.toolbar}>
@@ -175,7 +109,7 @@ export default function UsersTable() {
                         <circle cx="12" cy="12" r="3"/>
                       </svg>
                     </button>
-                    <button className={styles.editBtn} onClick={() => setEditUser({...u})} title="Edit">✏️</button>
+                    <button className={styles.editBtn} onClick={() => onEditUser(u)} title="Edit">✏️</button>
                     <button className={styles.deleteBtn} onClick={() => handleDelete(u.id)} title="Delete">🗑</button>
                   </div>
                 </td>
@@ -185,57 +119,7 @@ export default function UsersTable() {
         </table>
       </div>
 
-      {/* Add User Modal */}
-      {showModal && (
-        <div className={styles.overlay} onClick={() => setShowModal(false)}>
-          <div className={styles.modal} onClick={e => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h3>Add New User</h3>
-              <button className={styles.closeBtn} onClick={() => setShowModal(false)}>✕</button>
-            </div>
-            <form onSubmit={handleAddUser}>
-              {error && <div className={styles.error}>{error}</div>}
-              <div className={styles.formGrid}>
-                <div className={styles.field}>
-                  <label>Full Name</label>
-                  <input required value={form.fullName} onChange={e => setForm({...form, fullName: e.target.value})} placeholder="Full Name" />
-                </div>
-                <div className={styles.field}>
-                  <label>Username</label>
-                  <input required value={form.username} onChange={e => setForm({...form, username: e.target.value})} placeholder="Username" />
-                </div>
-                <div className={styles.field}>
-                  <label>Email</label>
-                  <input required type="email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="Email" />
-                </div>
-                <div className={styles.field}>
-                  <label>Phone</label>
-                  <input required value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} placeholder="Phone" />
-                </div>
-                <div className={styles.field}>
-                  <label>Password</label>
-                  <input required type="password" value={form.password} onChange={e => setForm({...form, password: e.target.value})} placeholder="Password" />
-                </div>
-                <div className={styles.field}>
-                  <label>Role</label>
-                  <select value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
-                    <option value="customer">Customer</option>
-                    <option value="seller">Seller</option>
-                    <option value="driver">Driver</option>
-                  </select>
-                </div>
-              </div>
-              <div className={styles.modalFooter}>
-                <button type="button" className={styles.cancelBtn} onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className={styles.submitBtn} disabled={loading}>
-                  {loading ? 'Creating...' : 'Create User'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-      {/* View User Modal */}
+      {/* View User Modal - kept as modal since it's read-only */}
       {viewUser && (
         <div className={styles.overlay} onClick={() => setViewUser(null)}>
           <div className={styles.modal} onClick={e => e.stopPropagation()}>
@@ -250,6 +134,7 @@ export default function UsersTable() {
                 ['Email', viewUser.email],
                 ['Phone', viewUser.phone],
                 ['Role', viewUser.role?.toUpperCase()],
+                ['Status', viewUser.active === false ? 'Inactive' : 'Active'],
                 ['Created', viewUser.createdAt?.seconds
                   ? new Date(viewUser.createdAt.seconds * 1000).toLocaleDateString()
                   : 'N/A'],
@@ -263,53 +148,6 @@ export default function UsersTable() {
             <div className={styles.modalFooter}>
               <button className={styles.cancelBtn} onClick={() => setViewUser(null)}>Close</button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit User Modal */}
-      {editUser && (
-        <div className={styles.overlay} onClick={() => setEditUser(null)}>
-          <div className={styles.modal} onClick={e => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h3>Edit User</h3>
-              <button className={styles.closeBtn} onClick={() => setEditUser(null)}>✕</button>
-            </div>
-            <form onSubmit={handleEditSave}>
-              {error && <div className={styles.error}>{error}</div>}
-              <div className={styles.formGrid}>
-                <div className={styles.field}>
-                  <label>Full Name</label>
-                  <input required value={editUser.fullName || ''} onChange={e => setEditUser({...editUser, fullName: e.target.value})} />
-                </div>
-                <div className={styles.field}>
-                  <label>Username</label>
-                  <input required value={editUser.username || ''} onChange={e => setEditUser({...editUser, username: e.target.value})} />
-                </div>
-                <div className={styles.field}>
-                  <label>Email</label>
-                  <input value={editUser.email || ''} disabled className={styles.disabled} />
-                </div>
-                <div className={styles.field}>
-                  <label>Phone</label>
-                  <input required value={editUser.phone || ''} onChange={e => setEditUser({...editUser, phone: e.target.value})} />
-                </div>
-                <div className={styles.field}>
-                  <label>Role</label>
-                  <select value={editUser.role || 'customer'} onChange={e => setEditUser({...editUser, role: e.target.value})}>
-                    <option value="customer">Customer</option>
-                    <option value="seller">Seller</option>
-                    <option value="driver">Driver</option>
-                  </select>
-                </div>
-              </div>
-              <div className={styles.modalFooter}>
-                <button type="button" className={styles.cancelBtn} onClick={() => setEditUser(null)}>Cancel</button>
-                <button type="submit" className={styles.submitBtn} disabled={loading}>
-                  {loading ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}
