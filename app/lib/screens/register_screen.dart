@@ -126,14 +126,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
-                          Icons.person_add_outlined,
-                          size: 80,
-                          color: Colors.purple,
-                        ),
+                        Image.asset('assets/zanseafoodlogo.png', height: 100),
                         const SizedBox(height: 16),
                         const Text(
-                          'Create Account',
+                          'ZanSeaFood',
                           style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,

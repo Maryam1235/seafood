@@ -68,14 +68,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(
-                          Icons.lock_outline,
-                          size: 80,
-                          color: Colors.blue,
-                        ),
+                        Image.asset('assets/zanseafoodlogo.png', height: 100),
                         const SizedBox(height: 16),
                         const Text(
-                          'Welcome Back',
+                          'ZanSeaFood',
                           style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
