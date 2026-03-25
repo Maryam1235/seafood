@@ -12,7 +12,7 @@
   align-items: center;
   gap: 12px;
   padding: 12px;
-  margin-bottom: 32px;
+  margin-bottom: 4px;
 }
 
 .brandLogo {
@@ -28,8 +28,8 @@
   gap: 12px;
   background: rgba(255,255,255,0.08);
   border-radius: 12px;
-  padding: 12px;
-  margin-bottom: 24px;
+  padding: 10px 12px;
+  margin-bottom: 20px;
 }
 
 .adminAvatar {
