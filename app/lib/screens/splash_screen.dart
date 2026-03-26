@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../services/location_service.dart';
 import 'login_screen.dart';
 import 'customer_dashboard.dart';
 import 'seller_dashboard.dart';
@@ -40,7 +41,10 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    Future.delayed(const Duration(seconds: 3), _navigate);
+    Future.delayed(const Duration(seconds: 3), () async {
+      await LocationService().getCurrentLocation();
+      _navigate();
+    });
   }
 
   Future<void> _navigate() async {
