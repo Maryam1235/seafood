@@ -12,6 +12,8 @@ export default function UsersTable({ onAddUser, onEditUser }) {
   const [roleFilter, setRoleFilter] = useState('all');
   const [sortBy, setSortBy]         = useState('createdAt');
   const [viewUser, setViewUser]     = useState(null);
+  const [page, setPage]             = useState(1);
+  const PAGE_SIZE = 10;
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'users'), (snap) => {
@@ -45,11 +47,18 @@ export default function UsersTable({ onAddUser, onEditUser }) {
     if (sortBy === 'fullName') return (a.fullName || '').localeCompare(b.fullName || '');
     if (sortBy === 'role') return (a.role || '').localeCompare(b.role || '');
     if (sortBy === 'active') return (b.active === false ? -1 : 1) - (a.active === false ? -1 : 1);
-    // default: createdAt descending
     const aTime = a.createdAt?.seconds || 0;
     const bTime = b.createdAt?.seconds || 0;
     return bTime - aTime;
   });
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Reset to page 1 when filters change
+  const handleSearch = (val) => { setSearch(val); setPage(1); };
+  const handleRole = (val) => { setRoleFilter(val); setPage(1); };
+  const handleSort = (val) => { setSortBy(val); setPage(1); };
 
   return (
     <div>
@@ -63,15 +72,15 @@ export default function UsersTable({ onAddUser, onEditUser }) {
           className={styles.search}
           placeholder="Search by name, email, phone..."
           value={search}
-          onChange={e => setSearch(e.target.value)}
+          onChange={e => handleSearch(e.target.value)}
         />
-        <select className={styles.filter} value={roleFilter} onChange={e => setRoleFilter(e.target.value)}>
+        <select className={styles.filter} value={roleFilter} onChange={e => handleRole(e.target.value)}>
           <option value="all">All Roles</option>
           <option value="customer">Customers</option>
           <option value="seller">Sellers</option>
           <option value="driver">Drivers</option>
         </select>
-        <select className={styles.filter} value={sortBy} onChange={e => setSortBy(e.target.value)}>
+        <select className={styles.filter} value={sortBy} onChange={e => handleSort(e.target.value)}>
           <option value="createdAt">Sort by Date</option>
           <option value="fullName">Sort by Name</option>
           <option value="role">Sort by Role</option>
@@ -92,9 +101,9 @@ export default function UsersTable({ onAddUser, onEditUser }) {
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {paginated.length === 0 ? (
               <tr><td colSpan={6} className={styles.empty}>No users found</td></tr>
-            ) : filtered.map(u => (
+            ) : paginated.map(u => (
               <tr key={u.id}>
                 <td>{u.fullName || 'N/A'}</td>
                 <td>
@@ -142,6 +151,28 @@ export default function UsersTable({ onAddUser, onEditUser }) {
           </tbody>
         </table>
       </div>
+
+      {totalPages > 1 && (
+        <div className={styles.pagination}>
+          <button
+            className={styles.pageBtn}
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page === 1}
+          >
+            ← Previous
+          </button>
+          <span className={styles.pageInfo}>
+            Page {page} of {totalPages} ({filtered.length} users)
+          </span>
+          <button
+            className={styles.pageBtn}
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page === totalPages}
+          >
+            Next →
+          </button>
+        </div>
+      )}
 
       {/* View User Modal - kept as modal since it's read-only */}
       {viewUser && (
