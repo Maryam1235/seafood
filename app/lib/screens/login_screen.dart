@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:geocoding/geocoding.dart';
 import '../services/auth_service.dart';
+import '../services/location_service.dart';
 import 'register_screen.dart';
 import 'customer_dashboard.dart';
 import 'seller_dashboard.dart';
@@ -35,6 +37,41 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
+
+      // Save location after login
+      try {
+        final position = await LocationService().getCurrentLocation();
+        if (position != null) {
+          final placemarks = await placemarkFromCoordinates(
+            position.latitude,
+            position.longitude,
+          );
+          final place = placemarks.first;
+          final parts = [
+            place.subLocality,
+            place.locality,
+            place.administrativeArea,
+            place.country,
+          ].where((e) => e != null && e.isNotEmpty).toList();
+
+          // Remove duplicates while preserving order
+          final seen = <String>{};
+          final uniqueParts = parts.where((e) => seen.add(e!)).toList();
+          final locationName = uniqueParts.join(', ');
+
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .update({
+                'location': {
+                  'latitude': position.latitude,
+                  'longitude': position.longitude,
+                  'name': locationName,
+                  'updatedAt': FieldValue.serverTimestamp(),
+                },
+              });
+        }
+      } catch (_) {}
 
       final doc = await FirebaseFirestore.instance
           .collection('users')

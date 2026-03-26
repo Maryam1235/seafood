@@ -71,13 +71,14 @@ export default function UsersTable({ onAddUser, onEditUser }) {
               <th>Full Name</th>
               <th>Role</th>
               <th>Status</th>
+              <th>Location</th>
               <th>Created</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={5} className={styles.empty}>No users found</td></tr>
+              <tr><td colSpan={6} className={styles.empty}>No users found</td></tr>
             ) : filtered.map(u => (
               <tr key={u.id}>
                 <td>{u.fullName || 'N/A'}</td>
@@ -96,6 +97,14 @@ export default function UsersTable({ onAddUser, onEditUser }) {
                   >
                     {u.active === false ? 'Inactive' : 'Active'}
                   </button>
+                </td>
+                <td>
+                  {u.location
+                    ? <span className={styles.location}>
+                        📍 {u.location.name || `${u.location.latitude?.toFixed(4)}, ${u.location.longitude?.toFixed(4)}`}
+                      </span>
+                    : <span className={styles.noLocation}>No location</span>
+                  }
                 </td>
                 <td>{u.createdAt?.seconds
                   ? new Date(u.createdAt.seconds * 1000).toLocaleDateString()
@@ -135,6 +144,8 @@ export default function UsersTable({ onAddUser, onEditUser }) {
                 ['Phone', viewUser.phone],
                 ['Role', viewUser.role?.toUpperCase()],
                 ['Status', viewUser.active === false ? 'Inactive' : 'Active'],
+                ['Location', viewUser.location?.name || 
+                  (viewUser.location ? `${viewUser.location.latitude?.toFixed(5)}, ${viewUser.location.longitude?.toFixed(5)}` : 'Not available')],
                 ['Created', viewUser.createdAt?.seconds
                   ? new Date(viewUser.createdAt.seconds * 1000).toLocaleDateString()
                   : 'N/A'],
