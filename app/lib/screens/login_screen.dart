@@ -47,17 +47,15 @@ class _LoginScreenState extends State<LoginScreen> {
             position.longitude,
           );
           final place = placemarks.first;
-          final parts = [
-            place.subLocality,
-            place.locality,
-            place.administrativeArea,
-            place.country,
-          ].where((e) => e != null && e.isNotEmpty).toList();
-
-          // Remove duplicates while preserving order
-          final seen = <String>{};
-          final uniqueParts = parts.where((e) => seen.add(e!)).toList();
-          final locationName = uniqueParts.join(', ');
+          final street =
+              place.thoroughfare ??
+              place.subLocality ??
+              place.subAdministrativeArea;
+          final city = place.locality ?? place.administrativeArea;
+          final locationName = [
+            street,
+            city,
+          ].where((e) => e != null && e.isNotEmpty).toSet().join(', ');
 
           await FirebaseFirestore.instance
               .collection('users')
