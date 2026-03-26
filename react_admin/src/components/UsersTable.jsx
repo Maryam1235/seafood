@@ -10,6 +10,7 @@ export default function UsersTable({ onAddUser, onEditUser }) {
   const [users, setUsers]           = useState([]);
   const [search, setSearch]         = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [sortBy, setSortBy]         = useState('createdAt');
   const [viewUser, setViewUser]     = useState(null);
 
   useEffect(() => {
@@ -40,6 +41,14 @@ export default function UsersTable({ onAddUser, onEditUser }) {
       (u.phone || '').toLowerCase().includes(q) ||
       (u.username || '').toLowerCase().includes(q);
     return matchRole && matchSearch;
+  }).sort((a, b) => {
+    if (sortBy === 'fullName') return (a.fullName || '').localeCompare(b.fullName || '');
+    if (sortBy === 'role') return (a.role || '').localeCompare(b.role || '');
+    if (sortBy === 'active') return (b.active === false ? -1 : 1) - (a.active === false ? -1 : 1);
+    // default: createdAt descending
+    const aTime = a.createdAt?.seconds || 0;
+    const bTime = b.createdAt?.seconds || 0;
+    return bTime - aTime;
   });
 
   return (
@@ -61,6 +70,12 @@ export default function UsersTable({ onAddUser, onEditUser }) {
           <option value="customer">Customers</option>
           <option value="seller">Sellers</option>
           <option value="driver">Drivers</option>
+        </select>
+        <select className={styles.filter} value={sortBy} onChange={e => setSortBy(e.target.value)}>
+          <option value="createdAt">Sort by Date</option>
+          <option value="fullName">Sort by Name</option>
+          <option value="role">Sort by Role</option>
+          <option value="active">Sort by Status</option>
         </select>
       </div>
 
