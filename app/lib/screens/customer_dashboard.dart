@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
+import 'login_screen.dart';
 
 class CustomerDashboard extends StatefulWidget {
   const CustomerDashboard({super.key});
@@ -33,6 +34,13 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
 
   Future<void> _logout() async {
     await _authService.logout();
+    if (mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
+    }
   }
 
   @override
@@ -99,10 +107,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
             const SizedBox(height: 24),
             const Text(
               'Quick Actions',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             GridView.count(
@@ -118,7 +123,9 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                   color: Colors.blue,
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Browse Seafood - Coming Soon')),
+                      const SnackBar(
+                        content: Text('Browse Seafood - Coming Soon'),
+                      ),
                     );
                   },
                 ),
