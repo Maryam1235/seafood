@@ -6,6 +6,7 @@ import 'dart:convert';
 import '../services/auth_service.dart';
 import '../services/location_service.dart';
 import 'register_screen.dart';
+import 'forgot_password_screen.dart';
 import 'customer_dashboard.dart';
 import 'seller_dashboard.dart';
 import 'driver_dashboard.dart';
@@ -214,6 +215,20 @@ class _LoginScreenState extends State<LoginScreen> {
                               value?.isEmpty ?? true ? 'Required' : null,
                         ),
                         const SizedBox(height: 24),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const ForgotPasswordScreen(),
+                                ),
+                              );
+                            },
+                            child: const Text('Forgot Password?'),
+                          ),
+                        ),
                         SizedBox(
                           width: double.infinity,
                           height: 50,

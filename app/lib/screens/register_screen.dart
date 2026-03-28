@@ -22,19 +22,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscureConfirmPassword = true;
   String _selectedRole = 'customer'; // Default role
 
-  // Domain per role
-  String get _emailDomain {
-    switch (_selectedRole) {
-      case 'seller':
-        return '@fisher.com';
-      case 'driver':
-        return '@driver.com';
-      default:
-        return '@customer.com';
-    }
-  }
-
-  String get _fullEmail => '${_emailController.text.trim()}$_emailDomain';
+  String get _fullEmail => _emailController.text.trim();
 
   Widget _buildRoleButton(String role, String label) {
     final isSelected = _selectedRole == role;
@@ -42,7 +30,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       child: GestureDetector(
         onTap: () => setState(() {
           _selectedRole = role;
-          _emailController.clear();
         }),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -218,21 +205,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           decoration: InputDecoration(
                             labelText: 'Email',
                             prefixIcon: const Icon(Icons.email),
-                            suffixText: _emailDomain,
-                            suffixStyle: TextStyle(
-                              color: Colors.blue.shade700,
-                              fontWeight: FontWeight.w600,
-                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            hintText: 'username',
+                            hintText: 'example@gmail.com',
                           ),
-                          keyboardType: TextInputType.text,
+                          keyboardType: TextInputType.emailAddress,
                           validator: (value) {
                             if (value?.isEmpty ?? true) return 'Required';
-                            if (value!.contains('@'))
-                              return 'Enter only the username part';
+                            if (!value!.contains('@')) return 'Invalid email';
                             return null;
                           },
                         ),
