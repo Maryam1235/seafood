@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:geocoding/geocoding.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../services/auth_service.dart';
 import '../services/location_service.dart';
 import 'register_screen.dart';
@@ -41,35 +42,60 @@ class _LoginScreenState extends State<LoginScreen> {
       // Save location after login
       try {
         final position = await LocationService().getCurrentLocation();
+        print('DEBUG position: $position');
         if (position != null) {
-          final placemarks = await placemarkFromCoordinates(
-            position.latitude,
-            position.longitude,
+          final url = Uri.parse(
+            'https://nominatim.openstreetmap.org/reverse?lat=${position.latitude}&lon=${position.longitude}&format=json&addressdetails=1',
           );
-          final place = placemarks.first;
-          final street =
-              place.thoroughfare ??
-              place.subLocality ??
-              place.subAdministrativeArea;
-          final city = place.locality ?? place.administrativeArea;
-          final locationName = [
-            street,
-            city,
-          ].where((e) => e != null && e.isNotEmpty).toSet().join(', ');
+          final response = await http.get(
+            url,
+            headers: {'User-Agent': 'ZanSeaFood/1.0'},
+          );
 
+          print('DEBUG nominatim status: ${response.statusCode}');
+          print('DEBUG nominatim body: ${response.body}');
+
+          String locationName =
+              '${position.latitude.toStringAsFixed(4)}, ${position.longitude.toStringAsFixed(4)}';
+
+          if (response.statusCode == 200) {
+            final data = jsonDecode(response.body);
+            final address = data['address'] as Map<String, dynamic>;
+            print('DEBUG address: $address');
+            final neighbourhood =
+                address['neighbourhood'] ??
+                address['suburb'] ??
+                address['quarter'] ??
+                address['village'] ??
+                address['hamlet'];
+            final city =
+                address['city'] ??
+                address['town'] ??
+                address['municipality'] ??
+                address['county'];
+            locationName = [neighbourhood, city]
+                .where((e) => e != null && e.toString().isNotEmpty)
+                .toSet()
+                .join(', ');
+          }
+
+          print('DEBUG locationName: $locationName');
           await FirebaseFirestore.instance
               .collection('users')
               .doc(user.uid)
-              .update({
+              .set({
                 'location': {
                   'latitude': position.latitude,
                   'longitude': position.longitude,
                   'name': locationName,
                   'updatedAt': FieldValue.serverTimestamp(),
                 },
-              });
+              }, SetOptions(merge: true));
+          print('DEBUG location saved successfully');
         }
-      } catch (_) {}
+      } catch (e) {
+        print('DEBUG location error: $e');
+      }
 
       final doc = await FirebaseFirestore.instance
           .collection('users')
