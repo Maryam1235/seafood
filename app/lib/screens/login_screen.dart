@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:provider/provider.dart';
+import '../providers/language_provider.dart';
 import '../services/auth_service.dart';
 import '../services/location_service.dart';
 import 'register_screen.dart';
@@ -127,6 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = context.watch<LanguageProvider>();
     return Scaffold(
       backgroundColor: _bgColor,
       body: SafeArea(
@@ -146,9 +149,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 24),
 
                 // Title
-                const Text(
-                  'Welcome Back',
-                  style: TextStyle(
+                Text(
+                  lang.t('welcome_back'),
+                  style: const TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF1A1A1A),
@@ -158,7 +161,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 // Subtitle
                 Text(
-                  'Your fresh seafood marketplace.\nLogin to continue.',
+                  lang.t('your_marketplace'),
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 15,
@@ -172,7 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 TextFormField(
                   controller: _emailController,
                   decoration: InputDecoration(
-                    hintText: 'Enter your email',
+                    hintText: lang.t('enter_email'),
                     prefixIcon: const Icon(
                       Icons.email_outlined,
                       color: Colors.grey,
@@ -198,7 +201,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 TextFormField(
                   controller: _passwordController,
                   decoration: InputDecoration(
-                    hintText: 'Password',
+                    hintText: lang.t('password'),
                     prefixIcon: const Icon(
                       Icons.lock_outline,
                       color: Colors.grey,
@@ -242,9 +245,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderRadius: BorderRadius.circular(4),
                           ),
                         ),
-                        const Text(
-                          'Remember me',
-                          style: TextStyle(
+                        Text(
+                          lang.t('remember_me'),
+                          style: const TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 14,
                           ),
@@ -258,9 +261,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           builder: (_) => const ForgotPasswordScreen(),
                         ),
                       ),
-                      child: const Text(
-                        'Forget Password',
-                        style: TextStyle(
+                      child: Text(
+                        lang.t('forget_password'),
+                        style: const TextStyle(
                           color: _btnColor,
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
@@ -287,9 +290,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     child: _isLoading
                         ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text(
-                            'Login',
-                            style: TextStyle(
+                        : Text(
+                            lang.t('login'),
+                            style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),
@@ -303,7 +306,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      "Don't have an account? ",
+                      lang.t('no_account'),
                       style: TextStyle(
                         color: Colors.grey.shade600,
                         fontSize: 14,
@@ -316,9 +319,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           builder: (_) => const RegisterScreen(),
                         ),
                       ),
-                      child: const Text(
-                        'Register',
-                        style: TextStyle(
+                      child: Text(
+                        lang.t('register'),
+                        style: const TextStyle(
                           color: _btnColor,
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
@@ -342,4 +345,3 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 }
-

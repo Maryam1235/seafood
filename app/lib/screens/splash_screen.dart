@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/location_service.dart';
+import 'language_screen.dart';
 import 'login_screen.dart';
 import 'customer_dashboard.dart';
 import 'seller_dashboard.dart';
@@ -63,6 +65,21 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _navigate() async {
+    // Check if language has been selected before
+    final prefs = await SharedPreferences.getInstance();
+    final hasLanguage = prefs.getString('language') != null;
+
+    if (!mounted) return;
+
+    // If no language selected yet, go to language screen
+    if (!hasLanguage) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LanguageScreen()),
+      );
+      return;
+    }
+
     final user = FirebaseAuth.instance.currentUser;
 
     if (!mounted) return;

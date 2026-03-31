@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import '../providers/language_provider.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
 
@@ -25,9 +27,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     if (user != null) {
       final userData = await _authService.getUserData(user.uid);
       if (userData != null && mounted) {
-        setState(() {
-          _username = userData['username'] ?? 'Customer';
-        });
+        setState(() => _username = userData['username'] ?? 'Customer');
       }
     }
   }
@@ -45,15 +45,16 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = context.watch<LanguageProvider>();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Customer Dashboard'),
+        title: Text('${lang.t('welcome')}, $_username'),
         backgroundColor: Colors.blue,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: _logout,
-            tooltip: 'Logout',
+            tooltip: lang.t('logout'),
           ),
         ],
       ),
@@ -83,7 +84,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Welcome, $_username!',
+                            '${lang.t('welcome')}, $_username!',
                             style: const TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
@@ -91,7 +92,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Customer Account',
+                            lang.t('customer_account'),
                             style: TextStyle(
                               fontSize: 16,
                               color: Colors.grey.shade600,
@@ -105,9 +106,9 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
-              'Quick Actions',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            Text(
+              lang.t('browse_seafood'),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             GridView.count(
@@ -117,47 +118,29 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
               mainAxisSpacing: 16,
               crossAxisSpacing: 16,
               children: [
-                _buildActionCard(
-                  icon: Icons.shopping_cart,
-                  title: 'Browse Seafood',
-                  color: Colors.blue,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Browse Seafood - Coming Soon'),
-                      ),
-                    );
-                  },
+                _buildCard(
+                  context,
+                  Icons.shopping_cart,
+                  lang.t('browse_seafood'),
+                  Colors.blue,
                 ),
-                _buildActionCard(
-                  icon: Icons.receipt_long,
-                  title: 'My Orders',
-                  color: Colors.green,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('My Orders - Coming Soon')),
-                    );
-                  },
+                _buildCard(
+                  context,
+                  Icons.receipt_long,
+                  lang.t('my_orders'),
+                  Colors.green,
                 ),
-                _buildActionCard(
-                  icon: Icons.favorite,
-                  title: 'Favorites',
-                  color: Colors.red,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Favorites - Coming Soon')),
-                    );
-                  },
+                _buildCard(
+                  context,
+                  Icons.favorite,
+                  lang.t('favorites'),
+                  Colors.red,
                 ),
-                _buildActionCard(
-                  icon: Icons.account_circle,
-                  title: 'My Profile',
-                  color: Colors.purple,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('My Profile - Coming Soon')),
-                    );
-                  },
+                _buildCard(
+                  context,
+                  Icons.account_circle,
+                  lang.t('my_profile'),
+                  Colors.purple,
                 ),
               ],
             ),
@@ -167,16 +150,19 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     );
   }
 
-  Widget _buildActionCard({
-    required IconData icon,
-    required String title,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildCard(
+    BuildContext context,
+    IconData icon,
+    String title,
+    Color color,
+  ) {
+    final lang = context.read<LanguageProvider>();
     return Card(
       elevation: 4,
       child: InkWell(
-        onTap: onTap,
+        onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$title - ${lang.t('coming_soon')}')),
+        ),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16.0),

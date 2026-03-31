@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/language_provider.dart';
 import '../services/auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -75,12 +77,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _register() async {
+    final lang = context.read<LanguageProvider>();
     if (!_formKey.currentState!.validate()) return;
 
     if (_passwordController.text != _confirmPasswordController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Passwords do not match'),
+        SnackBar(
+          content: Text(lang.t('passwords_no_match')),
           backgroundColor: Colors.red,
         ),
       );
@@ -103,8 +106,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Registration successful! Please login.'),
+          SnackBar(
+            content: Text(lang.t('reg_success')),
             backgroundColor: Colors.green,
           ),
         );
@@ -114,7 +117,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Registration failed: ${e.toString()}'),
+            content: Text('${lang.t('reg_failed')}${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -126,6 +129,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = context.watch<LanguageProvider>();
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -146,9 +150,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
               children: [
                 Image.asset('assets/zanseafoodlogo.png', height: 90),
                 const SizedBox(height: 12),
-                const Text(
-                  'Create Account',
-                  style: TextStyle(
+                Text(
+                  lang.t('create_account'),
+                  style: const TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF1A1A1A),
@@ -156,12 +160,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Sign up to get started',
+                  lang.t('sign_up'),
                   style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
                 ),
                 const SizedBox(height: 24),
-
-                // Role toggle
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.grey.shade200,
@@ -170,18 +172,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   padding: const EdgeInsets.all(4),
                   child: Row(
                     children: [
-                      _buildRoleButton('customer', 'Customer'),
-                      _buildRoleButton('seller', 'Seller'),
-                      _buildRoleButton('driver', 'Driver'),
+                      _buildRoleButton('customer', lang.t('customer')),
+                      _buildRoleButton('seller', lang.t('seller')),
+                      _buildRoleButton('driver', lang.t('driver')),
                     ],
                   ),
                 ),
                 const SizedBox(height: 20),
-
                 TextFormField(
                   controller: _fullNameController,
                   decoration: _fieldDecoration(
-                    'Full Name',
+                    lang.t('full_name'),
                     Icons.person_outline,
                   ),
                   validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
@@ -189,13 +190,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 14),
                 TextFormField(
                   controller: _usernameController,
-                  decoration: _fieldDecoration('Username', Icons.person),
+                  decoration: _fieldDecoration(
+                    lang.t('username'),
+                    Icons.person,
+                  ),
                   validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
                 ),
                 const SizedBox(height: 14),
                 TextFormField(
                   controller: _phoneController,
-                  decoration: _fieldDecoration('Phone Number', Icons.phone),
+                  decoration: _fieldDecoration(lang.t('phone'), Icons.phone),
                   keyboardType: TextInputType.phone,
                   validator: (v) {
                     if (v?.isEmpty ?? true) return 'Required';
@@ -206,7 +210,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 14),
                 TextFormField(
                   controller: _emailController,
-                  decoration: _fieldDecoration('Email', Icons.email_outlined),
+                  decoration: _fieldDecoration(
+                    lang.t('email'),
+                    Icons.email_outlined,
+                  ),
                   keyboardType: TextInputType.emailAddress,
                   validator: (v) {
                     if (v?.isEmpty ?? true) return 'Required';
@@ -218,7 +225,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 TextFormField(
                   controller: _passwordController,
                   decoration: _fieldDecoration(
-                    'Password',
+                    lang.t('password'),
                     Icons.lock_outline,
                     suffix: IconButton(
                       icon: Icon(
@@ -242,7 +249,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 TextFormField(
                   controller: _confirmPasswordController,
                   decoration: _fieldDecoration(
-                    'Confirm Password',
+                    lang.t('confirm_password'),
                     Icons.lock_outline,
                     suffix: IconButton(
                       icon: Icon(
@@ -261,12 +268,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   validator: (v) {
                     if (v?.isEmpty ?? true) return 'Required';
                     if (v != _passwordController.text)
-                      return 'Passwords do not match';
+                      return lang.t('passwords_no_match');
                     return null;
                   },
                 ),
                 const SizedBox(height: 28),
-
                 SizedBox(
                   width: double.infinity,
                   height: 54,
@@ -282,9 +288,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     child: _isLoading
                         ? const CircularProgressIndicator(color: Colors.white)
-                        : const Text(
-                            'Register',
-                            style: TextStyle(
+                        : Text(
+                            lang.t('register'),
+                            style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),
@@ -296,7 +302,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      'Already have an account? ',
+                      lang.t('already_account'),
                       style: TextStyle(
                         color: Colors.grey.shade600,
                         fontSize: 14,
@@ -304,9 +310,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     GestureDetector(
                       onTap: () => Navigator.pop(context),
-                      child: const Text(
-                        'Login',
-                        style: TextStyle(
+                      child: Text(
+                        lang.t('login'),
+                        style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                           color: Color(0xFF1A1A1A),

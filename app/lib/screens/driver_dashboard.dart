@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import '../providers/language_provider.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
 
@@ -26,9 +28,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
     if (user != null) {
       final userData = await _authService.getUserData(user.uid);
       if (userData != null && mounted) {
-        setState(() {
-          _username = userData['username'] ?? 'Driver';
-        });
+        setState(() => _username = userData['username'] ?? 'Driver');
       }
     }
   }
@@ -46,15 +46,16 @@ class _DriverDashboardState extends State<DriverDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = context.watch<LanguageProvider>();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Driver Dashboard'),
+        title: Text('${lang.t('welcome')}, $_username'),
         backgroundColor: Colors.teal,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: _logout,
-            tooltip: 'Logout',
+            tooltip: lang.t('logout'),
           ),
         ],
       ),
@@ -63,7 +64,6 @@ class _DriverDashboardState extends State<DriverDashboard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Profile card
             Card(
               elevation: 4,
               child: Padding(
@@ -85,15 +85,14 @@ class _DriverDashboardState extends State<DriverDashboard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Welcome, $_username!',
+                            '${lang.t('welcome')}, $_username!',
                             style: const TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(height: 4),
                           Text(
-                            'Delivery Driver',
+                            lang.t('driver_account'),
                             style: TextStyle(
                               fontSize: 16,
                               color: Colors.grey.shade600,
@@ -107,7 +106,6 @@ class _DriverDashboardState extends State<DriverDashboard> {
               ),
             ),
             const SizedBox(height: 16),
-            // Online/Offline toggle
             Card(
               elevation: 4,
               child: Padding(
@@ -124,7 +122,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          _isOnline ? 'You are Online' : 'You are Offline',
+                          _isOnline ? lang.t('online') : lang.t('offline'),
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
@@ -136,17 +134,12 @@ class _DriverDashboardState extends State<DriverDashboard> {
                       value: _isOnline,
                       activeColor: Colors.green,
                       onChanged: (value) {
-                        setState(() {
-                          _isOnline = value;
-                        });
+                        setState(() => _isOnline = value);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
-                              value
-                                  ? 'You are now online'
-                                  : 'You are now offline',
+                              value ? lang.t('online') : lang.t('offline'),
                             ),
-                            backgroundColor: value ? Colors.green : Colors.grey,
                           ),
                         );
                       },
@@ -156,9 +149,9 @@ class _DriverDashboardState extends State<DriverDashboard> {
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
-              'Driver Actions',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            Text(
+              lang.t('available_orders'),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             GridView.count(
@@ -168,51 +161,29 @@ class _DriverDashboardState extends State<DriverDashboard> {
               mainAxisSpacing: 16,
               crossAxisSpacing: 16,
               children: [
-                _buildActionCard(
-                  icon: Icons.assignment,
-                  title: 'Available Orders',
-                  color: Colors.teal,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Available Orders - Coming Soon'),
-                      ),
-                    );
-                  },
+                _buildCard(
+                  context,
+                  Icons.assignment,
+                  lang.t('available_orders'),
+                  Colors.teal,
                 ),
-                _buildActionCard(
-                  icon: Icons.local_shipping,
-                  title: 'Active Delivery',
-                  color: Colors.blue,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Active Delivery - Coming Soon'),
-                      ),
-                    );
-                  },
+                _buildCard(
+                  context,
+                  Icons.local_shipping,
+                  lang.t('active_delivery'),
+                  Colors.blue,
                 ),
-                _buildActionCard(
-                  icon: Icons.history,
-                  title: 'Delivery History',
-                  color: Colors.purple,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Delivery History - Coming Soon'),
-                      ),
-                    );
-                  },
+                _buildCard(
+                  context,
+                  Icons.history,
+                  lang.t('delivery_history'),
+                  Colors.purple,
                 ),
-                _buildActionCard(
-                  icon: Icons.attach_money,
-                  title: 'Earnings',
-                  color: Colors.green,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Earnings - Coming Soon')),
-                    );
-                  },
+                _buildCard(
+                  context,
+                  Icons.attach_money,
+                  lang.t('earnings'),
+                  Colors.green,
                 ),
               ],
             ),
@@ -222,16 +193,19 @@ class _DriverDashboardState extends State<DriverDashboard> {
     );
   }
 
-  Widget _buildActionCard({
-    required IconData icon,
-    required String title,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildCard(
+    BuildContext context,
+    IconData icon,
+    String title,
+    Color color,
+  ) {
+    final lang = context.read<LanguageProvider>();
     return Card(
       elevation: 4,
       child: InkWell(
-        onTap: onTap,
+        onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$title - ${lang.t('coming_soon')}')),
+        ),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16.0),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+import '../providers/language_provider.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
 
@@ -25,9 +27,7 @@ class _SellerDashboardState extends State<SellerDashboard> {
     if (user != null) {
       final userData = await _authService.getUserData(user.uid);
       if (userData != null && mounted) {
-        setState(() {
-          _username = userData['username'] ?? 'Seller';
-        });
+        setState(() => _username = userData['username'] ?? 'Seller');
       }
     }
   }
@@ -45,15 +45,16 @@ class _SellerDashboardState extends State<SellerDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = context.watch<LanguageProvider>();
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Seller Dashboard'),
+        title: Text('${lang.t('welcome')}, $_username'),
         backgroundColor: Colors.orange,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: _logout,
-            tooltip: 'Logout',
+            tooltip: lang.t('logout'),
           ),
         ],
       ),
@@ -83,7 +84,7 @@ class _SellerDashboardState extends State<SellerDashboard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Welcome, $_username!',
+                            '${lang.t('welcome')}, $_username!',
                             style: const TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
@@ -91,7 +92,7 @@ class _SellerDashboardState extends State<SellerDashboard> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Seafood Seller Account',
+                            lang.t('seller_account'),
                             style: TextStyle(
                               fontSize: 16,
                               color: Colors.grey.shade600,
@@ -105,9 +106,9 @@ class _SellerDashboardState extends State<SellerDashboard> {
               ),
             ),
             const SizedBox(height: 24),
-            const Text(
-              'Seller Actions',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            Text(
+              lang.t('orders'),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             GridView.count(
@@ -117,51 +118,29 @@ class _SellerDashboardState extends State<SellerDashboard> {
               mainAxisSpacing: 16,
               crossAxisSpacing: 16,
               children: [
-                _buildActionCard(
-                  icon: Icons.add_business,
-                  title: 'Add Product',
-                  color: Colors.orange,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Add Product - Coming Soon'),
-                      ),
-                    );
-                  },
+                _buildCard(
+                  context,
+                  Icons.add_business,
+                  lang.t('add_product'),
+                  Colors.orange,
                 ),
-                _buildActionCard(
-                  icon: Icons.inventory,
-                  title: 'My Products',
-                  color: Colors.blue,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('My Products - Coming Soon'),
-                      ),
-                    );
-                  },
+                _buildCard(
+                  context,
+                  Icons.inventory,
+                  lang.t('my_products'),
+                  Colors.blue,
                 ),
-                _buildActionCard(
-                  icon: Icons.shopping_bag,
-                  title: 'Orders',
-                  color: Colors.green,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Orders - Coming Soon')),
-                    );
-                  },
+                _buildCard(
+                  context,
+                  Icons.shopping_bag,
+                  lang.t('orders'),
+                  Colors.green,
                 ),
-                _buildActionCard(
-                  icon: Icons.analytics,
-                  title: 'Sales Report',
-                  color: Colors.purple,
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Sales Report - Coming Soon'),
-                      ),
-                    );
-                  },
+                _buildCard(
+                  context,
+                  Icons.analytics,
+                  lang.t('sales_report'),
+                  Colors.purple,
                 ),
               ],
             ),
@@ -171,16 +150,19 @@ class _SellerDashboardState extends State<SellerDashboard> {
     );
   }
 
-  Widget _buildActionCard({
-    required IconData icon,
-    required String title,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildCard(
+    BuildContext context,
+    IconData icon,
+    String title,
+    Color color,
+  ) {
+    final lang = context.read<LanguageProvider>();
     return Card(
       elevation: 4,
       child: InkWell(
-        onTap: onTap,
+        onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('$title - ${lang.t('coming_soon')}')),
+        ),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
