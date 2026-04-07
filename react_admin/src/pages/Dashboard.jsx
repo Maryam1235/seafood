@@ -3,9 +3,11 @@ import Sidebar from '../components/Sidebar';
 import TopHeader from '../components/TopHeader';
 import Overview from '../components/Overview';
 import UsersTable from '../components/UsersTable';
+import ProductsTable from '../components/ProductsTable';
 import Settings from '../components/Settings';
 import AddUser from './AddUser';
 import EditUser from './EditUser';
+import AddProduct from './AddProduct';
 import styles from './Dashboard.module.css';
 
 export default function Dashboard() {
@@ -21,6 +23,7 @@ export default function Dashboard() {
   const renderContent = () => {
     if (subPage?.type === 'add') return <AddUser onBack={() => setSubPage(null)} />;
     if (subPage?.type === 'edit') return <EditUser user={subPage.user} onBack={() => setSubPage(null)} />;
+    if (subPage?.type === 'addProduct') return <AddProduct onBack={() => setSubPage(null)} />;
 
     switch (activePage) {
       case 'overview': return <Overview />;
@@ -29,6 +32,7 @@ export default function Dashboard() {
           onAddUser={() => setSubPage({ type: 'add' })}
           onEditUser={(user) => setSubPage({ type: 'edit', user })}
         />;
+      case 'products': return <ProductsTable onAddProduct={() => setSubPage({ type: 'addProduct' })} />;
       case 'settings': return <Settings />;
       default: return <Overview />;
     }

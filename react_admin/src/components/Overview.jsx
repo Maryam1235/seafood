@@ -5,9 +5,10 @@ import styles from './Overview.module.css';
 
 export default function Overview() {
   const [stats, setStats] = useState({ total: 0, customers: 0, sellers: 0, drivers: 0 });
+  const [productStats, setProductStats] = useState({ total: 0, active: 0 });
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'users'), (snap) => {
+    const unsub1 = onSnapshot(collection(db, 'users'), (snap) => {
       const users = snap.docs.map(d => d.data());
       setStats({
         total: users.length,
@@ -16,7 +17,14 @@ export default function Overview() {
         drivers: users.filter(u => u.role === 'driver').length,
       });
     });
-    return unsub;
+    const unsub2 = onSnapshot(collection(db, 'products'), (snap) => {
+      const products = snap.docs.map(d => d.data());
+      setProductStats({
+        total: products.length,
+        active: products.filter(p => p.isAvailable).length,
+      });
+    });
+    return () => { unsub1(); unsub2(); };
   }, []);
 
   const cards = [
@@ -24,6 +32,8 @@ export default function Overview() {
     { label: 'Customers', value: stats.customers, icon: '🛒', color: '#059669' },
     { label: 'Sellers', value: stats.sellers, icon: '🏪', color: '#d97706' },
     { label: 'Drivers', value: stats.drivers, icon: '🚗', color: '#0891b2' },
+    { label: 'Total Products', value: productStats.total, icon: '🐟', color: '#7c3aed' },
+    { label: 'Active Products', value: productStats.active, icon: '✅', color: '#16a34a' },
   ];
 
   return (

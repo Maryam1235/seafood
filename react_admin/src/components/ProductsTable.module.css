@@ -1,0 +1,326 @@
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #111827;
+  white-space: nowrap;
+}
+
+.count {
+  background: #e0e7ff;
+  color: #4f46e5;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.search {
+  flex: 2;
+  min-width: 200px;
+  padding: 10px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+}
+
+.search:focus { border-color: #6366f1; }
+
+.filter {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  background: white;
+  cursor: pointer;
+}
+
+.tableWrap {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  overflow: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th {
+  background: #f9fafb;
+  padding: 14px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f3f4f6;
+  color: #374151;
+  vertical-align: middle;
+}
+
+.table tr:hover td { background: #f9fafb; }
+
+.productCell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.noImg {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.productName { font-weight: 600; color: #111827; }
+
+.catBadge {
+  background: #e0e7ff;
+  color: #4338ca;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.price { font-weight: 600; color: #1e1b4b; }
+
+.statusBtn {
+  border: none;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  width: auto;
+}
+
+.statusBtn.active  { background: #d1fae5; color: #065f46; }
+.statusBtn.inactive { background: #fee2e2; color: #dc2626; }
+.statusBtn:hover { opacity: 0.8; }
+
+.actions { display: flex; gap: 6px; align-items: center; }
+
+.viewBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 6px;
+  color: #4f46e5;
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  transition: background 0.2s;
+}
+
+.viewBtn:hover { background: #dbeafe; }
+
+.deleteBtn {
+  background: #fee2e2;
+  color: #dc2626;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  width: auto;
+  transition: background 0.2s;
+}
+
+.deleteBtn:hover { background: #fecaca; }
+
+.empty { text-align: center; padding: 40px; color: #9ca3af; }
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.pageBtn {
+  background: white;
+  border: 1px solid #d1d5db;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  color: #374151;
+  width: auto;
+  transition: all 0.2s;
+}
+
+.pageBtn:hover:not(:disabled) { background: #4f46e5; color: white; border-color: #4f46e5; }
+.pageBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+.pageInfo { font-size: 14px; color: #6b7280; font-weight: 500; }
+
+/* Modal */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  backdrop-filter: blur(4px);
+}
+
+.modal {
+  background: white;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.25);
+  overflow: hidden;
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 22px 28px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+}
+
+.modalHeader h3 { font-size: 18px; font-weight: 700; color: white; }
+
+.closeBtn {
+  background: rgba(255,255,255,0.2);
+  border: none;
+  font-size: 15px;
+  cursor: pointer;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 8px;
+  width: auto;
+}
+
+.closeBtn:hover { background: rgba(255,255,255,0.35); }
+
+.modalImg {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.viewGrid { display: flex; flex-direction: column; padding: 8px 0; }
+
+.viewRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 28px;
+  border-bottom: 1px solid #f3f4f6;
+  transition: background 0.15s;
+}
+
+.viewRow:hover { background: #f9fafb; }
+.viewRow:last-child { border-bottom: none; }
+.viewLabel { font-size: 12px; color: #9ca3af; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.viewValue { font-size: 14px; color: #111827; font-weight: 600; }
+
+.modalFooter {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px 28px;
+  background: #f9fafb;
+  border-top: 1px solid #f3f4f6;
+}
+
+.cancelBtn {
+  padding: 10px 20px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: white;
+  color: #374151;
+  font-size: 14px;
+  cursor: pointer;
+  width: auto;
+}
+
+.cancelBtn:hover { background: #f9fafb; }
+
+.sellerCell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sellerAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #e0e7ff;
+  color: #4f46e5;
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sellerName {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.sellerEmail {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.addBtn {
+  background: #4f46e5;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  width: auto;
+  transition: background 0.2s;
+}
+
+.addBtn:hover { background: #4338ca; }

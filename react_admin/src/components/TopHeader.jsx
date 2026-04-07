@@ -3,6 +3,7 @@ import styles from './TopHeader.module.css';
 const pageTitles = {
   overview: 'Dashboard',
   users: 'User Management',
+  products: 'Product Management',
   settings: 'Settings',
 };
 
