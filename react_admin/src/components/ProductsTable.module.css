@@ -1,8 +1,10 @@
 .header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
   margin-bottom: 24px;
+  flex-wrap: nowrap;
+  gap: 16px;
 }
 
 .title {

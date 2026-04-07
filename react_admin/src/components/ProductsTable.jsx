@@ -69,10 +69,7 @@ export default function ProductsTable({ onAddProduct }) {
     <div>
       <div className={styles.header}>
         <h2 className={styles.title}>Product Management</h2>
-        <div style={{display:'flex', alignItems:'center', gap:'12px'}}>
-          <span className={styles.count}>{filtered.length} products</span>
-          <button className={styles.addBtn} onClick={onAddProduct}>+ Add Product</button>
-        </div>
+        <button className={styles.addBtn} onClick={onAddProduct}>+ Add Product</button>
       </div>
 
       {/* Toolbar */}
