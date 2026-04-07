@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
+import 'profile_screen.dart';
 
 class CustomerDashboard extends StatefulWidget {
   const CustomerDashboard({super.key});
@@ -48,7 +49,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
       _HomePage(userData: _userData, lang: lang, onLogout: _logout),
       _OrdersPage(lang: lang),
       _FavoritesPage(lang: lang),
-      _ProfilePage(userData: _userData, lang: lang, onLogout: _logout),
+      ProfileScreen(themeColor: Colors.blue.shade700, roleIcon: Icons.person),
     ];
 
     return Scaffold(

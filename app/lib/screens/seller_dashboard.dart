@@ -7,6 +7,7 @@ import '../services/auth_service.dart';
 import 'login_screen.dart';
 import 'add_product_screen.dart';
 import 'seller_products_page.dart';
+import 'profile_screen.dart';
 
 class SellerDashboard extends StatefulWidget {
   const SellerDashboard({super.key});
@@ -51,7 +52,7 @@ class _SellerDashboardState extends State<SellerDashboard> {
       _SellerHomePage(userData: _userData, lang: lang, onLogout: _logout),
       SellerProductsPage(lang: lang),
       _OrdersPage(lang: lang),
-      _SellerProfilePage(userData: _userData, lang: lang, onLogout: _logout),
+      ProfileScreen(themeColor: const Color(0xFF1E1B4B), roleIcon: Icons.store),
     ];
 
     return Scaffold(
@@ -586,5 +587,3 @@ class _InfoTile extends StatelessWidget {
     );
   }
 }
-
-

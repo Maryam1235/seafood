@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
+import 'profile_screen.dart';
 
 class DriverDashboard extends StatefulWidget {
   const DriverDashboard({super.key});
@@ -55,7 +56,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
       ),
       _DeliveriesPage(lang: lang),
       _EarningsPage(lang: lang),
-      _DriverProfilePage(userData: _userData, lang: lang, onLogout: _logout),
+      ProfileScreen(
+        themeColor: Colors.teal.shade700,
+        roleIcon: Icons.delivery_dining,
+      ),
     ];
 
     return Scaffold(
