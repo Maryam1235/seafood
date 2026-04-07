@@ -29,21 +29,27 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
   File? _imageFile;
   bool _isLoading = false;
-  String _selectedCategory = 'Fish';
+  String _selectedCategory = 'cat_fish';
   String _selectedUnit = 'kg';
 
-  final List<String> _categories = [
-    'Fish',
-    'Shrimp',
-    'Crab',
-    'Lobster',
-    'Squid',
-    'Octopus',
-    'Other',
+  final List<String> _categoryKeys = [
+    'cat_fish',
+    'cat_shrimp',
+    'cat_crab',
+    'cat_lobster',
+    'cat_squid',
+    'cat_octopus',
+    'cat_other',
   ];
-  final List<String> _units = ['kg', 'g', 'piece', 'dozen'];
+  final List<String> _unitKeys = [
+    'unit_kg',
+    'unit_g',
+    'unit_piece',
+    'unit_dozen',
+  ];
+  final List<String> _unitValues = ['kg', 'g', 'piece', 'dozen'];
 
-  Future<void> _pickImage() async {
+  Future<void> _pickImage(LanguageProvider lang) async {
     final picker = ImagePicker();
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
@@ -53,12 +59,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.camera_alt),
-              title: const Text('Camera'),
+              title: Text(lang.t('camera')),
               onTap: () => Navigator.pop(context, ImageSource.camera),
             ),
             ListTile(
               leading: const Icon(Icons.photo_library),
-              title: const Text('Gallery'),
+              title: Text(lang.t('gallery')),
               onTap: () => Navigator.pop(context, ImageSource.gallery),
             ),
           ],
@@ -85,12 +91,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
     return data['secure_url'];
   }
 
-  Future<void> _submit() async {
+  Future<void> _submit(LanguageProvider lang) async {
     if (!_formKey.currentState!.validate()) return;
     if (_imageFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a product image'),
+        SnackBar(
+          content: Text(lang.t('select_image_error')),
           backgroundColor: Colors.red,
         ),
       );
@@ -119,8 +125,8 @@ class _AddProductScreenState extends State<AddProductScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Product added successfully!'),
+          SnackBar(
+            content: Text(lang.t('product_added')),
             backgroundColor: Colors.green,
           ),
         );
@@ -159,7 +165,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
             children: [
               // Image picker
               GestureDetector(
-                onTap: _pickImage,
+                onTap: () => _pickImage(lang),
                 child: Container(
                   width: double.infinity,
                   height: 200,
@@ -188,7 +194,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'Tap to add product photo',
+                              lang.t('select_image'),
                               style: TextStyle(
                                 color: const Color(0xFF1E1B4B),
                                 fontWeight: FontWeight.w500,
@@ -200,17 +206,17 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              _sectionTitle('Product Details'),
+              _sectionTitle(lang.t('product_details')),
               _buildField(
                 _nameController,
-                'Product Name',
+                lang.t('product_name'),
                 Icons.set_meal,
                 validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
               ),
               const SizedBox(height: 14),
               _buildField(
                 _descController,
-                'Description',
+                lang.t('description'),
                 Icons.description,
                 maxLines: 3,
                 validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
@@ -218,22 +224,32 @@ class _AddProductScreenState extends State<AddProductScreen> {
               const SizedBox(height: 14),
               // Category dropdown
               DropdownButtonFormField<String>(
-                value: _selectedCategory,
-                decoration: _inputDecoration('Category', Icons.category),
-                items: _categories
-                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                value: _categoryKeys.contains(_selectedCategory)
+                    ? _selectedCategory
+                    : 'cat_fish',
+                decoration: _inputDecoration(
+                  lang.t('category'),
+                  Icons.category,
+                ),
+                items: _categoryKeys
+                    .map(
+                      (key) => DropdownMenuItem(
+                        value: key,
+                        child: Text(lang.t(key)),
+                      ),
+                    )
                     .toList(),
                 onChanged: (v) => setState(() => _selectedCategory = v!),
               ),
               const SizedBox(height: 20),
-              _sectionTitle('Pricing & Stock'),
+              _sectionTitle(lang.t('pricing_stock')),
               Row(
                 children: [
                   Expanded(
                     flex: 2,
                     child: _buildField(
                       _priceController,
-                      'Price (TShs)',
+                      lang.t('price_tzs'),
                       Icons.money,
                       keyboardType: TextInputType.number,
                       validator: (v) {
@@ -247,12 +263,14 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   Expanded(
                     child: DropdownButtonFormField<String>(
                       value: _selectedUnit,
-                      decoration: _inputDecoration('Unit', Icons.scale),
-                      items: _units
-                          .map(
-                            (u) => DropdownMenuItem(value: u, child: Text(u)),
-                          )
-                          .toList(),
+                      decoration: _inputDecoration(lang.t('unit'), Icons.scale),
+                      items: List.generate(
+                        _unitKeys.length,
+                        (i) => DropdownMenuItem(
+                          value: _unitValues[i],
+                          child: Text(lang.t(_unitKeys[i])),
+                        ),
+                      ),
                       onChanged: (v) => setState(() => _selectedUnit = v!),
                     ),
                   ),
@@ -261,7 +279,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
               const SizedBox(height: 14),
               _buildField(
                 _stockController,
-                'Available Stock',
+                lang.t('available_stock'),
                 Icons.inventory,
                 keyboardType: TextInputType.number,
                 validator: (v) {
@@ -271,10 +289,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 },
               ),
               const SizedBox(height: 20),
-              _sectionTitle('Location'),
+              _sectionTitle(lang.t('location')),
               _buildField(
                 _locationController,
-                'Pickup Location',
+                lang.t('pickup_location'),
                 Icons.location_on,
                 validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
               ),
@@ -283,7 +301,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 width: double.infinity,
                 height: 54,
                 child: ElevatedButton(
-                  onPressed: _isLoading ? null : _submit,
+                  onPressed: _isLoading ? null : () => _submit(lang),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1E1B4B),
                     foregroundColor: Colors.white,

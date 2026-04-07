@@ -63,9 +63,9 @@ class _SellerDashboardState extends State<SellerDashboard> {
         selectedItemColor: const Color(0xFF1E1B4B),
         unselectedItemColor: Colors.grey,
         items: [
-          const BottomNavigationBarItem(
+          BottomNavigationBarItem(
             icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
+            label: lang.t('dashboard'),
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.inventory),
@@ -586,3 +586,5 @@ class _InfoTile extends StatelessWidget {
     );
   }
 }
+
+

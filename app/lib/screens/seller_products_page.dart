@@ -29,16 +29,19 @@ class _SellerProductsPageState extends State<SellerProductsPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Delete Product'),
-        content: const Text('Are you sure you want to delete this product?'),
+        title: Text(widget.lang.t('delete_product')),
+        content: Text(widget.lang.t('delete_confirm')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(widget.lang.t('cancel')),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text(
+              widget.lang.t('delete'),
+              style: TextStyle(color: Colors.red),
+            ),
           ),
         ],
       ),
@@ -84,7 +87,7 @@ class _SellerProductsPageState extends State<SellerProductsPage> {
                 TextField(
                   onChanged: (v) => setState(() => _search = v.toLowerCase()),
                   decoration: InputDecoration(
-                    hintText: 'Search products...',
+                    hintText: widget.lang.t('search_products'),
                     prefixIcon: const Icon(Icons.search, color: Colors.grey),
                     filled: true,
                     fillColor: Colors.grey.shade100,
@@ -102,7 +105,7 @@ class _SellerProductsPageState extends State<SellerProductsPage> {
                       child: DropdownButtonFormField<String>(
                         value: _sortBy,
                         decoration: InputDecoration(
-                          labelText: 'Sort by',
+                          labelText: widget.lang.t('sort_by'),
                           filled: true,
                           fillColor: Colors.grey.shade100,
                           border: OutlineInputBorder(
@@ -114,26 +117,26 @@ class _SellerProductsPageState extends State<SellerProductsPage> {
                             vertical: 8,
                           ),
                         ),
-                        items: const [
+                        items: [
                           DropdownMenuItem(
                             value: 'newest',
-                            child: Text('Newest'),
+                            child: Text(widget.lang.t('newest')),
                           ),
                           DropdownMenuItem(
                             value: 'oldest',
-                            child: Text('Oldest'),
+                            child: Text(widget.lang.t('oldest')),
                           ),
                           DropdownMenuItem(
                             value: 'price_high',
-                            child: Text('Price ↑'),
+                            child: Text(widget.lang.t('price_high')),
                           ),
                           DropdownMenuItem(
                             value: 'price_low',
-                            child: Text('Price ↓'),
+                            child: Text(widget.lang.t('price_low')),
                           ),
                           DropdownMenuItem(
                             value: 'name',
-                            child: Text('Name A-Z'),
+                            child: Text(widget.lang.t('name_az')),
                           ),
                         ],
                         onChanged: (v) => setState(() => _sortBy = v!),
@@ -144,7 +147,7 @@ class _SellerProductsPageState extends State<SellerProductsPage> {
                       child: DropdownButtonFormField<String>(
                         value: _filterStatus,
                         decoration: InputDecoration(
-                          labelText: 'Status',
+                          labelText: widget.lang.t('status'),
                           filled: true,
                           fillColor: Colors.grey.shade100,
                           border: OutlineInputBorder(
@@ -156,15 +159,18 @@ class _SellerProductsPageState extends State<SellerProductsPage> {
                             vertical: 8,
                           ),
                         ),
-                        items: const [
-                          DropdownMenuItem(value: 'all', child: Text('All')),
+                        items: [
+                          DropdownMenuItem(
+                            value: 'all',
+                            child: Text(widget.lang.t('all')),
+                          ),
                           DropdownMenuItem(
                             value: 'active',
-                            child: Text('Active'),
+                            child: Text(widget.lang.t('active')),
                           ),
                           DropdownMenuItem(
                             value: 'inactive',
-                            child: Text('Inactive'),
+                            child: Text(widget.lang.t('inactive')),
                           ),
                         ],
                         onChanged: (v) => setState(() => _filterStatus = v!),
@@ -197,7 +203,7 @@ class _SellerProductsPageState extends State<SellerProductsPage> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'No products yet. Tap + to add one.',
+                          widget.lang.t('no_products'),
                           style: TextStyle(
                             fontSize: 16,
                             color: Colors.grey.shade500,
@@ -263,7 +269,7 @@ class _SellerProductsPageState extends State<SellerProductsPage> {
                 if (products.isEmpty) {
                   return Center(
                     child: Text(
-                      'No products match your search.',
+                      widget.lang.t('no_match'),
                       style: TextStyle(color: Colors.grey.shade500),
                     ),
                   );
@@ -346,7 +352,9 @@ class _SellerProductsPageState extends State<SellerProductsPage> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
-                                isAvailable ? 'Active' : 'Inactive',
+                                isAvailable
+                                    ? widget.lang.t('active')
+                                    : widget.lang.t('inactive'),
                                 style: TextStyle(
                                   color: isAvailable
                                       ? Colors.green
@@ -378,7 +386,9 @@ class _SellerProductsPageState extends State<SellerProductsPage> {
                                       size: 16,
                                     ),
                                     label: Text(
-                                      isAvailable ? 'Deactivate' : 'Activate',
+                                      isAvailable
+                                          ? widget.lang.t('deactivate')
+                                          : widget.lang.t('activate'),
                                       style: const TextStyle(fontSize: 12),
                                     ),
                                     style: TextButton.styleFrom(
@@ -398,9 +408,9 @@ class _SellerProductsPageState extends State<SellerProductsPage> {
                                       Icons.delete_outline,
                                       size: 16,
                                     ),
-                                    label: const Text(
-                                      'Delete',
-                                      style: TextStyle(fontSize: 12),
+                                    label: Text(
+                                      widget.lang.t('delete'),
+                                      style: const TextStyle(fontSize: 12),
                                     ),
                                     style: TextButton.styleFrom(
                                       foregroundColor: Colors.red,
