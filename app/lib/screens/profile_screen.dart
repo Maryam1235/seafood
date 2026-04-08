@@ -34,11 +34,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       final data = await _authService.getUserData(user.uid);
-      if (mounted)
+      if (mounted) {
         setState(() {
           _userData = data;
           _isLoading = false;
         });
+      }
     }
   }
 
@@ -56,8 +57,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final lang = context.watch<LanguageProvider>();
-    if (_isLoading)
+    if (_isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
 
     final username = _userData?['username'] ?? '';
     final fullName = _userData?['fullName'] ?? '';

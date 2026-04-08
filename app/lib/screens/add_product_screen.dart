@@ -224,7 +224,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
               const SizedBox(height: 14),
               // Category dropdown
               DropdownButtonFormField<String>(
-                value: _categoryKeys.contains(_selectedCategory)
+                initialValue: _categoryKeys.contains(_selectedCategory)
                     ? _selectedCategory
                     : 'cat_fish',
                 decoration: _inputDecoration(
@@ -262,7 +262,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: _selectedUnit,
+                      initialValue: _selectedUnit,
                       decoration: _inputDecoration(lang.t('unit'), Icons.scale),
                       items: List.generate(
                         _unitKeys.length,

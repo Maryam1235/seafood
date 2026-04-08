@@ -103,7 +103,7 @@ class _SellerProductsPageState extends State<SellerProductsPage> {
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<String>(
-                        value: _sortBy,
+                        initialValue: _sortBy,
                         decoration: InputDecoration(
                           labelText: widget.lang.t('sort_by'),
                           filled: true,
@@ -145,7 +145,7 @@ class _SellerProductsPageState extends State<SellerProductsPage> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: DropdownButtonFormField<String>(
-                        value: _filterStatus,
+                        initialValue: _filterStatus,
                         decoration: InputDecoration(
                           labelText: widget.lang.t('status'),
                           filled: true,
