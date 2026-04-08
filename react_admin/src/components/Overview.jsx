@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
+import { Users, ShoppingCart, Store, Truck, Fish, CheckCircle } from 'lucide-react';
 import styles from './Overview.module.css';
 
 export default function Overview() {
@@ -28,12 +29,12 @@ export default function Overview() {
   }, []);
 
   const cards = [
-    { label: 'Total Users', value: stats.total, icon: '👥', color: '#4f46e5' },
-    { label: 'Customers', value: stats.customers, icon: '🛒', color: '#059669' },
-    { label: 'Sellers', value: stats.sellers, icon: '🏪', color: '#d97706' },
-    { label: 'Drivers', value: stats.drivers, icon: '🚗', color: '#0891b2' },
-    { label: 'Total Products', value: productStats.total, icon: '🐟', color: '#7c3aed' },
-    { label: 'Active Products', value: productStats.active, icon: '✅', color: '#16a34a' },
+    { label: 'Total Users',      value: stats.total,          Icon: Users,        color: '#4f46e5' },
+    { label: 'Customers',        value: stats.customers,      Icon: ShoppingCart, color: '#059669' },
+    { label: 'Sellers',          value: stats.sellers,        Icon: Store,        color: '#d97706' },
+    { label: 'Drivers',          value: stats.drivers,        Icon: Truck,        color: '#0891b2' },
+    { label: 'Total Products',   value: productStats.total,   Icon: Fish,         color: '#7c3aed' },
+    { label: 'Active Products',  value: productStats.active,  Icon: CheckCircle,  color: '#16a34a' },
   ];
 
   return (
@@ -43,7 +44,7 @@ export default function Overview() {
       <div className={styles.grid}>
         {cards.map((card) => (
           <div key={card.label} className={styles.card} style={{ borderTop: `4px solid ${card.color}` }}>
-            <div className={styles.cardIcon}>{card.icon}</div>
+            <div className={styles.cardIcon} style={{ color: card.color }}><card.Icon size={36} /></div>
             <div className={styles.cardValue}>{card.value}</div>
             <div className={styles.cardLabel}>{card.label}</div>
           </div>

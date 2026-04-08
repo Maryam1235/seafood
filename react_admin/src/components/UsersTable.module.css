@@ -246,6 +246,7 @@
 }
 
 .viewBtn:hover { background: #dbeafe; color: #1d4ed8; }
+.editBtn { color: #d97706; }
 .editBtn:hover { background: #fef3c7; }
 
 .cancelBtn {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { collection, onSnapshot, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { Eye, Pencil, Trash2 } from 'lucide-react';
 import styles from './UsersTable.module.css';
 
 const roleBadge = { customer: '#dbeafe', seller: '#fef3c7', driver: '#d1fae5' };
@@ -137,13 +138,14 @@ export default function UsersTable({ onAddUser, onEditUser }) {
                 <td>
                   <div className={styles.actions}>
                     <button className={styles.viewBtn} onClick={() => setViewUser(u)} title="View">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                        <circle cx="12" cy="12" r="3"/>
-                      </svg>
+                      <Eye size={16} />
                     </button>
-                    <button className={styles.editBtn} onClick={() => onEditUser(u)} title="Edit">✏️</button>
-                    <button className={styles.deleteBtn} onClick={() => handleDelete(u.id)} title="Delete">🗑</button>
+                    <button className={styles.editBtn} onClick={() => onEditUser(u)} title="Edit">
+                      <Pencil size={16} />
+                    </button>
+                    <button className={styles.deleteBtn} onClick={() => handleDelete(u.id)} title="Delete">
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 </td>
               </tr>

@@ -3,13 +3,14 @@ import { auth } from '../firebase';
 import { useEffect, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { LayoutDashboard, Users, Fish, Settings, LogOut } from 'lucide-react';
 import styles from './Sidebar.module.css';
 
 const navItems = [
-  { id: 'overview', label: 'Dashboard', icon: '📊' },
-  { id: 'users', label: 'User Management', icon: '👥' },
-  { id: 'products', label: 'Products Management', icon: '🐟' },
-  { id: 'settings', label: 'Settings', icon: '⚙️' },
+  { id: 'overview',  label: 'Dashboard',        icon: LayoutDashboard },
+  { id: 'users',     label: 'User Management',   icon: Users },
+  { id: 'products',  label: 'Products',          icon: Fish },
+  { id: 'settings',  label: 'Settings',          icon: Settings },
 ];
 
 export default function Sidebar({ activePage, setActivePage, collapsed }) {
@@ -21,11 +22,7 @@ export default function Sidebar({ activePage, setActivePage, collapsed }) {
       const user = auth.currentUser;
       if (user) {
         const snap = await getDoc(doc(db, 'users', user.uid));
-        if (snap.exists()) {
-          setUsername(snap.data().username || user.email);
-        } else {
-          setUsername(user.email);
-        }
+        setUsername(snap.exists() ? (snap.data().username || user.email) : user.email);
       }
     };
     fetchUser();
@@ -70,21 +67,24 @@ export default function Sidebar({ activePage, setActivePage, collapsed }) {
       <nav className={styles.nav}>
         {navItems
           .filter(item => item.label.toLowerCase().includes(search.toLowerCase()))
-          .map((item) => (
-          <button
-            key={item.id}
-            className={`${styles.navItem} ${activePage === item.id ? styles.active : ''}`}
-            onClick={() => setActivePage(item.id)}
-            title={collapsed ? item.label : ''}
-          >
-            <span className={styles.icon}>{item.icon}</span>
-            {!collapsed && <span>{item.label}</span>}
-          </button>
-        ))}
+          .map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                className={`${styles.navItem} ${activePage === item.id ? styles.active : ''}`}
+                onClick={() => setActivePage(item.id)}
+                title={collapsed ? item.label : ''}
+              >
+                <Icon size={18} />
+                {!collapsed && <span>{item.label}</span>}
+              </button>
+            );
+          })}
       </nav>
 
       <button className={styles.logout} onClick={() => signOut(auth)} title={collapsed ? 'Logout' : ''}>
-        <span>🚪</span>
+        <LogOut size={18} />
         {!collapsed && <span>Logout</span>}
       </button>
     </aside>

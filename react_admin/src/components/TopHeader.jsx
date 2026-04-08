@@ -1,3 +1,4 @@
+import { Menu, X } from 'lucide-react';
 import styles from './TopHeader.module.css';
 
 const pageTitles = {
@@ -12,9 +13,7 @@ export default function TopHeader({ collapsed, setCollapsed, activePage }) {
     <header className={styles.header}>
       <div className={styles.left}>
         <button className={styles.toggleBtn} onClick={() => setCollapsed(!collapsed)}>
-          <span></span>
-          <span></span>
-          <span></span>
+          {collapsed ? <Menu size={20} /> : <X size={20} />}
         </button>
         <h1 className={styles.pageTitle}>{pageTitles[activePage] || 'Dashboard'}</h1>
       </div>
