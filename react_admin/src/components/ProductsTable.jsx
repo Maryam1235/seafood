@@ -163,11 +163,11 @@ export default function ProductsTable({ onAddProduct }) {
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
+      {totalPages > 0 && (
         <div className={styles.pagination}>
           <button className={styles.pageBtn} onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>← Previous</button>
-          <span className={styles.pageInfo}>Page {page} of {totalPages} ({filtered.length} products)</span>
-          <button className={styles.pageBtn} onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next →</button>
+          <span className={styles.pageInfo}>Page {page} of {totalPages || 1} ({filtered.length} products)</span>
+          <button className={styles.pageBtn} onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages || totalPages === 0}>Next →</button>
         </div>
       )}
 
