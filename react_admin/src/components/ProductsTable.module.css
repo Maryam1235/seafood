@@ -209,9 +209,12 @@
   background: white;
   border-radius: 20px;
   width: 100%;
-  max-width: 480px;
+  max-width: 560px;
+  max-height: 90vh;
   box-shadow: 0 25px 60px rgba(0,0,0,0.25);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .modalHeader {
@@ -326,3 +329,143 @@
 }
 
 .addBtn:hover { background: #4338ca; }
+
+/* Product View Modal Styles */
+.modalBody {
+  overflow-y: auto;
+  padding: 20px 24px;
+  flex: 1;
+}
+
+.productHero {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+  align-items: flex-start;
+}
+
+.heroImg {
+  width: 120px;
+  height: 120px;
+  border-radius: 12px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid #f3f4f6;
+}
+
+.heroPlaceholder {
+  width: 120px;
+  height: 120px;
+  border-radius: 12px;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  flex-shrink: 0;
+}
+
+.heroInfo { flex: 1; }
+
+.heroName {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 8px;
+}
+
+.heroBadge {
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.heroBadge.active  { background: #d1fae5; color: #065f46; }
+.heroBadge.inactive { background: #fee2e2; color: #dc2626; }
+
+.heroPrice {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1e1b4b;
+  margin: 6px 0 4px;
+}
+
+.heroStock { font-size: 13px; color: #6b7280; }
+
+.sectionTitle {
+  font-size: 11px;
+  font-weight: 700;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 16px 0 8px;
+}
+
+.infoCard {
+  background: #f9fafb;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.sellerRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+}
+
+.sellerAvatarLg {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #e0e7ff;
+  color: #4f46e5;
+  font-size: 18px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sellerNameLg { font-size: 15px; font-weight: 600; color: #111827; }
+.sellerEmailLg { font-size: 13px; color: #6b7280; margin-top: 2px; }
+
+.detailRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.detailRow:last-child { border-bottom: none; }
+.detailLabel { font-size: 12px; color: #9ca3af; font-weight: 600; }
+.detailValue { font-size: 14px; color: #111827; font-weight: 600; }
+
+.descBox {
+  background: #f9fafb;
+  padding: 14px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  color: #374151;
+  line-height: 1.6;
+}
+
+.editBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 6px;
+  color: #d97706;
+  display: inline-flex;
+  align-items: center;
+  width: auto;
+  transition: background 0.2s;
+}
+
+.editBtn:hover { background: #fef3c7; }

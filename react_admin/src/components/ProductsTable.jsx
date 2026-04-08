@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { collection, onSnapshot, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Eye, Trash2 } from 'lucide-react';
+import { Eye, Pencil, Trash2 } from 'lucide-react';
 import styles from './ProductsTable.module.css';
 
-export default function ProductsTable({ onAddProduct }) {
+export default function ProductsTable({ onAddProduct, onEditProduct }) {
   const [products, setProducts] = useState([]);
   const [sellers, setSellers]   = useState({});  // uid -> userData
   const [search, setSearch]     = useState('');
@@ -151,6 +151,9 @@ export default function ProductsTable({ onAddProduct }) {
                     <button className={styles.viewBtn} onClick={() => setViewProduct({...p, seller})} title="View">
                       <Eye size={16} />
                     </button>
+                    <button className={styles.editBtn} onClick={() => onEditProduct({...p})} title="Edit">
+                      <Pencil size={16} />
+                    </button>
                     <button className={styles.deleteBtn} onClick={() => handleDelete(p.id)} title="Delete">
                       <Trash2 size={14} />
                     </button>
@@ -175,32 +178,67 @@ export default function ProductsTable({ onAddProduct }) {
       {viewProduct && (
         <div className={styles.overlay} onClick={() => setViewProduct(null)}>
           <div className={styles.modal} onClick={e => e.stopPropagation()}>
+            {/* Header */}
             <div className={styles.modalHeader}>
               <h3>Product Details</h3>
               <button className={styles.closeBtn} onClick={() => setViewProduct(null)}>✕</button>
             </div>
-            {viewProduct.imageUrl && (
-              <img src={viewProduct.imageUrl} alt={viewProduct.name} className={styles.modalImg} />
-            )}
-            <div className={styles.viewGrid}>
-              {[
-                ['Name', viewProduct.name],
-                ['Seller', viewProduct.seller?.username || 'Unknown'],
-                ['Seller Email', viewProduct.seller?.email || 'N/A'],
-                ['Category', viewProduct.category],
-                ['Price', `TShs ${viewProduct.price?.toLocaleString()} / ${viewProduct.unit}`],
-                ['Stock', `${viewProduct.stock} ${viewProduct.unit}`],
-                ['Location', viewProduct.location],
-                ['Description', viewProduct.description],
-                ['Status', viewProduct.isAvailable ? 'Active' : 'Inactive'],
-                ['Added', viewProduct.createdAt ? new Date(viewProduct.createdAt).toLocaleDateString() : 'N/A'],
-              ].map(([label, value]) => (
-                <div key={label} className={styles.viewRow}>
-                  <span className={styles.viewLabel}>{label}</span>
-                  <span className={styles.viewValue}>{value || 'N/A'}</span>
+
+            <div className={styles.modalBody}>
+              {/* Product image + name hero */}
+              <div className={styles.productHero}>
+                {viewProduct.imageUrl
+                  ? <img src={viewProduct.imageUrl} alt={viewProduct.name} className={styles.heroImg} />
+                  : <div className={styles.heroPlaceholder}>📦</div>
+                }
+                <div className={styles.heroInfo}>
+                  <h2 className={styles.heroName}>{viewProduct.name}</h2>
+                  <span className={`${styles.heroBadge} ${viewProduct.isAvailable ? styles.active : styles.inactive}`}>
+                    {viewProduct.isAvailable ? 'Active' : 'Inactive'}
+                  </span>
+                  <p className={styles.heroPrice}>TShs {viewProduct.price?.toLocaleString()} / {viewProduct.unit}</p>
+                  <p className={styles.heroStock}>Stock: {viewProduct.stock} {viewProduct.unit}</p>
                 </div>
-              ))}
+              </div>
+
+              {/* Seller info */}
+              <div className={styles.sectionTitle}>Seller Information</div>
+              <div className={styles.infoCard}>
+                <div className={styles.sellerRow}>
+                  <div className={styles.sellerAvatarLg}>
+                    {(viewProduct.seller?.username || '?').charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <div className={styles.sellerNameLg}>{viewProduct.seller?.username || 'Unknown'}</div>
+                    <div className={styles.sellerEmailLg}>{viewProduct.seller?.email || 'N/A'}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Product details */}
+              <div className={styles.sectionTitle}>Product Details</div>
+              <div className={styles.infoCard}>
+                {[
+                  ['Category', viewProduct.category],
+                  ['Location', viewProduct.location],
+                  ['Added', viewProduct.createdAt ? new Date(viewProduct.createdAt).toLocaleDateString() : 'N/A'],
+                ].map(([label, value]) => (
+                  <div key={label} className={styles.detailRow}>
+                    <span className={styles.detailLabel}>{label}</span>
+                    <span className={styles.detailValue}>{value || 'N/A'}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Description */}
+              {viewProduct.description && (
+                <>
+                  <div className={styles.sectionTitle}>Description</div>
+                  <div className={styles.descBox}>{viewProduct.description}</div>
+                </>
+              )}
             </div>
+
             <div className={styles.modalFooter}>
               <button className={styles.cancelBtn} onClick={() => setViewProduct(null)}>Close</button>
             </div>
