@@ -5,6 +5,7 @@ import '../providers/language_provider.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
 import 'profile_screen.dart';
+import 'browse_seafood_screen.dart';
 
 class CustomerDashboard extends StatefulWidget {
   const CustomerDashboard({super.key});
@@ -46,7 +47,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   Widget build(BuildContext context) {
     final lang = context.watch<LanguageProvider>();
     final pages = [
-      _HomePage(userData: _userData, lang: lang, onLogout: _logout),
+      const BrowseSeafoodScreen(),
       _OrdersPage(lang: lang),
       _FavoritesPage(lang: lang),
       ProfileScreen(themeColor: Colors.blue.shade700, roleIcon: Icons.person),
@@ -62,7 +63,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
         unselectedItemColor: Colors.grey,
         items: [
           BottomNavigationBarItem(
-            icon: const Icon(Icons.home),
+            icon: const Icon(Icons.set_meal),
             label: lang.t('browse_seafood'),
           ),
           BottomNavigationBarItem(
@@ -326,4 +327,3 @@ class _FavoritesPage extends StatelessWidget {
     );
   }
 }
-
