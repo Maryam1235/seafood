@@ -6,6 +6,7 @@ import '../services/auth_service.dart';
 import 'login_screen.dart';
 import 'profile_screen.dart';
 import 'browse_seafood_screen.dart';
+import 'orders_screen.dart';
 
 class CustomerDashboard extends StatefulWidget {
   const CustomerDashboard({super.key});
@@ -48,7 +49,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
     final lang = context.watch<LanguageProvider>();
     final pages = [
       const BrowseSeafoodScreen(),
-      _OrdersPage(lang: lang),
+      const OrdersScreen(),
       _FavoritesPage(lang: lang),
       ProfileScreen(themeColor: Colors.blue.shade700, roleIcon: Icons.person),
     ];

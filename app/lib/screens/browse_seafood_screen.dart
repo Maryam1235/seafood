@@ -4,7 +4,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
 import '../services/auth_service.dart';
+import '../services/cart_service.dart';
 import 'login_screen.dart';
+import 'cart_screen.dart';
 
 class BrowseSeafoodScreen extends StatefulWidget {
   const BrowseSeafoodScreen({super.key});
@@ -18,6 +20,9 @@ class _BrowseSeafoodScreenState extends State<BrowseSeafoodScreen> {
   String _selectedCategory = 'all';
   String _username = '';
   final _authService = AuthService();
+  final _searchController = TextEditingController();
+
+  static const _navy = Color(0xFF1E1B4B);
 
   @override
   void initState() {
@@ -45,7 +50,6 @@ class _BrowseSeafoodScreenState extends State<BrowseSeafoodScreen> {
     }
   }
 
-  // Map category keys to display labels per language
   String _catLabel(String key, LanguageProvider lang) {
     if (key == 'all') return lang.isSwahili ? 'Zote' : 'All';
     return lang.t(key);
@@ -56,142 +60,237 @@ class _BrowseSeafoodScreenState extends State<BrowseSeafoodScreen> {
     final lang = context.watch<LanguageProvider>();
 
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        backgroundColor: Colors.blue.shade700,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              lang.t('welcome_back'),
-              style: const TextStyle(fontSize: 13, color: Colors.white70),
-            ),
-            Text(
-              _username,
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+      backgroundColor: const Color(0xFFF5F6FA),
+      body: CustomScrollView(
+        slivers: [
+          // SliverAppBar with search
+          SliverAppBar(
+            expandedHeight: 160,
+            floating: false,
+            pinned: true,
+            backgroundColor: _navy,
+            foregroundColor: Colors.white,
+            automaticallyImplyLeading: false,
+            actions: [
+              // Cart icon with badge
+              StreamBuilder<QuerySnapshot>(
+                stream: CartService().cartStream(),
+                builder: (context, snap) {
+                  final count = snap.data?.docs.length ?? 0;
+                  return Stack(
+                    children: [
+                      IconButton(
+                        icon: const Icon(
+                          Icons.shopping_cart_outlined,
+                          color: Colors.white,
+                        ),
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const CartScreen()),
+                        ),
+                      ),
+                      if (count > 0)
+                        Positioned(
+                          right: 6,
+                          top: 6,
+                          child: Container(
+                            width: 18,
+                            height: 18,
+                            decoration: const BoxDecoration(
+                              color: Colors.red,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Text(
+                                '$count',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
               ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: _logout,
-            tooltip: lang.t('logout'),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Search + filter header
-          Container(
-            color: Colors.blue.shade700,
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-            child: Column(
-              children: [
-                // Search bar
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
+              IconButton(
+                icon: const Icon(Icons.logout, color: Colors.white),
+                onPressed: _logout,
+              ),
+            ],
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF1E1B4B), Color(0xFF3730A3)],
                   ),
-                  child: TextField(
-                    onChanged: (v) => setState(() => _search = v.toLowerCase()),
-                    decoration: InputDecoration(
-                      hintText: lang.isSwahili
-                          ? 'Tafuta samaki...'
-                          : 'Search seafood...',
-                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                ),
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          lang.isSwahili
+                              ? 'Habari, $_username 👋'
+                              : 'Hello, $_username 👋',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          lang.isSwahili
+                              ? 'Tafuta Samaki Safi'
+                              : 'Find Fresh Seafood',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        // Search bar
+                        Container(
+                          height: 46,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: TextField(
+                            controller: _searchController,
+                            onChanged: (v) =>
+                                setState(() => _search = v.toLowerCase()),
+                            decoration: InputDecoration(
+                              hintText: lang.isSwahili
+                                  ? 'Tafuta samaki...'
+                                  : 'Search seafood...',
+                              hintStyle: TextStyle(
+                                color: Colors.grey.shade400,
+                                fontSize: 14,
+                              ),
+                              prefixIcon: const Icon(
+                                Icons.search,
+                                color: Colors.grey,
+                                size: 20,
+                              ),
+                              suffixIcon: _search.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(
+                                        Icons.clear,
+                                        size: 18,
+                                        color: Colors.grey,
+                                      ),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() => _search = '');
+                                      },
+                                    )
+                                  : null,
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(
+                                vertical: 13,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
           ),
 
           // Category chips
-          StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('products')
-                .where('isAvailable', isEqualTo: true)
-                .snapshots(),
-            builder: (context, snap) {
-              if (!snap.hasData) return const SizedBox();
-              final cats = [
-                'all',
-                ...{
-                  ...snap.data!.docs.map(
-                    (d) => (d.data() as Map)['category'] as String? ?? '',
-                  ),
-                }.where((c) => c.isNotEmpty),
-              ];
-
-              return Container(
-                height: 48,
-                color: Colors.white,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  itemCount: cats.length,
-                  itemBuilder: (context, i) {
-                    final cat = cats[i];
-                    final selected = _selectedCategory == cat;
-                    return GestureDetector(
-                      onTap: () => setState(() => _selectedCategory = cat),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        margin: const EdgeInsets.only(right: 8),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: selected
-                              ? Colors.blue.shade700
-                              : Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          _catLabel(cat, lang),
-                          style: TextStyle(
-                            color: selected
-                                ? Colors.white
-                                : Colors.grey.shade700,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              );
-            },
-          ),
-
-          // Products grid
-          Expanded(
+          SliverToBoxAdapter(
             child: StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('products')
                   .where('isAvailable', isEqualTo: true)
                   .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return Center(
+              builder: (context, snap) {
+                if (!snap.hasData) return const SizedBox(height: 56);
+                final cats = [
+                  'all',
+                  ...{
+                    ...snap.data!.docs.map(
+                      (d) => (d.data() as Map)['category'] as String? ?? '',
+                    ),
+                  }.where((c) => c.isNotEmpty),
+                ];
+
+                return Container(
+                  color: Colors.white,
+                  height: 52,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    itemCount: cats.length,
+                    itemBuilder: (context, i) {
+                      final cat = cats[i];
+                      final selected = _selectedCategory == cat;
+                      return GestureDetector(
+                        onTap: () => setState(() => _selectedCategory = cat),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          margin: const EdgeInsets.only(right: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 18,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: selected ? _navy : Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: selected ? _navy : Colors.grey.shade200,
+                            ),
+                          ),
+                          child: Text(
+                            _catLabel(cat, lang),
+                            style: TextStyle(
+                              color: selected
+                                  ? Colors.white
+                                  : Colors.grey.shade700,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+
+          // Products
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('products')
+                .where('isAvailable', isEqualTo: true)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SliverFillRemaining(
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return SliverFillRemaining(
+                  child: Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -212,63 +311,71 @@ class _BrowseSeafoodScreenState extends State<BrowseSeafoodScreen> {
                         ),
                       ],
                     ),
-                  );
-                }
+                  ),
+                );
+              }
 
-                var products = snapshot.data!.docs.map((d) {
-                  return {'id': d.id, ...d.data() as Map<String, dynamic>};
+              var products = snapshot.data!.docs.map((d) {
+                return {'id': d.id, ...d.data() as Map<String, dynamic>};
+              }).toList();
+
+              if (_search.isNotEmpty) {
+                products = products.where((p) {
+                  final name = (p['name'] ?? '').toString().toLowerCase();
+                  final cat = (p['category'] ?? '').toString().toLowerCase();
+                  final loc = (p['location'] ?? '').toString().toLowerCase();
+                  return name.contains(_search) ||
+                      cat.contains(_search) ||
+                      loc.contains(_search);
                 }).toList();
+              }
 
-                // Filter by search
-                if (_search.isNotEmpty) {
-                  products = products.where((p) {
-                    final name = (p['name'] ?? '').toString().toLowerCase();
-                    final cat = (p['category'] ?? '').toString().toLowerCase();
-                    final loc = (p['location'] ?? '').toString().toLowerCase();
-                    return name.contains(_search) ||
-                        cat.contains(_search) ||
-                        loc.contains(_search);
-                  }).toList();
-                }
+              if (_selectedCategory != 'all') {
+                products = products
+                    .where((p) => p['category'] == _selectedCategory)
+                    .toList();
+              }
 
-                // Filter by category
-                if (_selectedCategory != 'all') {
-                  products = products
-                      .where((p) => p['category'] == _selectedCategory)
-                      .toList();
-                }
-
-                if (products.isEmpty) {
-                  return Center(
+              if (products.isEmpty) {
+                return SliverFillRemaining(
+                  child: Center(
                     child: Text(
                       lang.isSwahili
                           ? 'Hakuna bidhaa zinazolingana'
-                          : 'No products match your search',
+                          : 'No products match',
                       style: TextStyle(color: Colors.grey.shade500),
                     ),
-                  );
-                }
+                  ),
+                );
+              }
 
-                return GridView.builder(
-                  padding: const EdgeInsets.all(16),
+              return SliverPadding(
+                padding: const EdgeInsets.all(16),
+                sliver: SliverGrid(
                   gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                     crossAxisCount: 2,
-                    childAspectRatio: 0.62,
+                    childAspectRatio: 0.68,
                     crossAxisSpacing: 12,
                     mainAxisSpacing: 12,
                   ),
-                  itemCount: products.length,
-                  itemBuilder: (context, index) {
-                    final p = products[index];
-                    return _ProductCard(product: p, lang: lang);
-                  },
-                );
-              },
-            ),
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) =>
+                        _ProductCard(product: products[index], lang: lang),
+                    childCount: products.length,
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 }
 
@@ -276,6 +383,8 @@ class _ProductCard extends StatelessWidget {
   final Map<String, dynamic> product;
   final LanguageProvider lang;
   const _ProductCard({required this.product, required this.lang});
+
+  static const _navy = Color(0xFF1E1B4B);
 
   @override
   Widget build(BuildContext context) {
@@ -288,7 +397,12 @@ class _ProductCard extends StatelessWidget {
     final category = product['category'] ?? '';
 
     return GestureDetector(
-      onTap: () => _showDetails(context),
+      onTap: () => showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => _ProductDetailSheet(product: product, lang: lang),
+      ),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -297,7 +411,7 @@ class _ProductCard extends StatelessWidget {
             BoxShadow(
               color: Colors.grey.shade200,
               blurRadius: 8,
-              offset: const Offset(0, 2),
+              offset: const Offset(0, 3),
             ),
           ],
         ),
@@ -305,22 +419,49 @@ class _ProductCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Image
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(16),
-              ),
-              child: imageUrl != null
-                  ? Image.network(
-                      imageUrl,
-                      height: 130,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _placeholder(),
-                    )
-                  : _placeholder(),
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
+                  ),
+                  child: imageUrl != null
+                      ? Image.network(
+                          imageUrl,
+                          height: 120,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _placeholder(),
+                        )
+                      : _placeholder(),
+                ),
+                // Category badge
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _navy.withOpacity(0.85),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      lang.t(category.isNotEmpty ? category : 'cat_other'),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
             Padding(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -329,39 +470,31 @@ class _ProductCard extends StatelessWidget {
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 14,
+                      color: Color(0xFF111827),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    lang.t(category.isNotEmpty ? category : 'cat_other'),
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.blue.shade600,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
                     'TShs ${price?.toStringAsFixed(0) ?? '0'} / $unit',
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1E1B4B),
+                      color: _navy,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Row(
                     children: [
                       Icon(
                         Icons.inventory_2_outlined,
-                        size: 12,
+                        size: 11,
                         color: Colors.grey.shade500,
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 3),
                       Text(
-                        '${lang.isSwahili ? 'Hisa' : 'Stock'}: $stock $unit',
+                        '$stock $unit',
                         style: TextStyle(
                           fontSize: 11,
                           color: Colors.grey.shade500,
@@ -374,10 +507,10 @@ class _ProductCard extends StatelessWidget {
                     children: [
                       Icon(
                         Icons.location_on_outlined,
-                        size: 12,
+                        size: 11,
                         color: Colors.grey.shade500,
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 3),
                       Expanded(
                         child: Text(
                           location,
@@ -400,29 +533,20 @@ class _ProductCard extends StatelessWidget {
     );
   }
 
-  Widget _placeholder() {
-    return Container(
-      height: 130,
-      width: double.infinity,
-      color: Colors.grey.shade100,
-      child: Icon(Icons.set_meal, size: 50, color: Colors.grey.shade300),
-    );
-  }
-
-  void _showDetails(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _ProductDetailSheet(product: product, lang: lang),
-    );
-  }
+  Widget _placeholder() => Container(
+    height: 120,
+    width: double.infinity,
+    color: Colors.grey.shade100,
+    child: Icon(Icons.set_meal, size: 40, color: Colors.grey.shade300),
+  );
 }
 
 class _ProductDetailSheet extends StatelessWidget {
   final Map<String, dynamic> product;
   final LanguageProvider lang;
   const _ProductDetailSheet({required this.product, required this.lang});
+
+  static const _navy = Color(0xFF1E1B4B);
 
   @override
   Widget build(BuildContext context) {
@@ -437,7 +561,7 @@ class _ProductDetailSheet extends StatelessWidget {
     final sellerId = product['sellerId'];
 
     return DraggableScrollableSheet(
-      initialChildSize: 0.85,
+      initialChildSize: 0.88,
       maxChildSize: 0.95,
       minChildSize: 0.5,
       builder: (_, controller) => Container(
@@ -448,9 +572,10 @@ class _ProductDetailSheet extends StatelessWidget {
         child: ListView(
           controller: controller,
           children: [
+            // Handle bar
             Center(
               child: Container(
-                margin: const EdgeInsets.only(top: 12),
+                margin: const EdgeInsets.only(top: 10, bottom: 4),
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
@@ -459,20 +584,35 @@ class _ProductDetailSheet extends StatelessWidget {
                 ),
               ),
             ),
+            // Product image
             if (imageUrl != null)
-              Image.network(
-                imageUrl,
-                height: 220,
-                width: double.infinity,
-                fit: BoxFit.cover,
+              ClipRRect(
+                child: Image.network(
+                  imageUrl,
+                  height: 240,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                ),
+              )
+            else
+              Container(
+                height: 200,
+                color: Colors.grey.shade100,
+                child: Icon(
+                  Icons.set_meal,
+                  size: 80,
+                  color: Colors.grey.shade300,
+                ),
               ),
+
             Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Name + category
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
                         child: Text(
@@ -480,22 +620,24 @@ class _ProductDetailSheet extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
+                            color: Color(0xFF111827),
                           ),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
+                          horizontal: 10,
+                          vertical: 5,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
-                          borderRadius: BorderRadius.circular(20),
+                          color: _navy.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           lang.t(category.isNotEmpty ? category : 'cat_other'),
-                          style: TextStyle(
-                            color: Colors.blue.shade700,
+                          style: const TextStyle(
+                            color: _navy,
                             fontWeight: FontWeight.w600,
                             fontSize: 12,
                           ),
@@ -503,48 +645,53 @@ class _ProductDetailSheet extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
+                  // Price
                   Text(
                     'TShs ${price?.toStringAsFixed(0) ?? '0'} / $unit',
                     style: const TextStyle(
-                      fontSize: 24,
+                      fontSize: 26,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF1E1B4B),
+                      color: _navy,
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
+                  // Stock + location chips
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: [
-                      _infoChip(
+                      _chip(
                         Icons.inventory_2_outlined,
                         '${lang.isSwahili ? 'Hisa' : 'Stock'}: $stock $unit',
                         Colors.green,
                       ),
-                      _infoChip(
+                      _chip(
                         Icons.location_on_outlined,
                         location,
                         Colors.orange,
                       ),
                     ],
                   ),
+
+                  // Description
                   if (description.isNotEmpty) ...[
                     const SizedBox(height: 20),
-                    Text(
-                      lang.isSwahili ? 'Maelezo' : 'Description',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    _sectionTitle(lang.isSwahili ? 'Maelezo' : 'Description'),
                     const SizedBox(height: 8),
-                    Text(
-                      description,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey.shade600,
-                        height: 1.5,
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        description,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade700,
+                          height: 1.6,
+                        ),
                       ),
                     ),
                   ],
@@ -552,14 +699,10 @@ class _ProductDetailSheet extends StatelessWidget {
                   // Seller info
                   if (sellerId != null) ...[
                     const SizedBox(height: 20),
-                    Text(
+                    _sectionTitle(
                       lang.isSwahili
                           ? 'Maelezo ya Muuzaji'
                           : 'Seller Information',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
                     ),
                     const SizedBox(height: 10),
                     FutureBuilder<DocumentSnapshot>(
@@ -568,29 +711,30 @@ class _ProductDetailSheet extends StatelessWidget {
                           .doc(sellerId)
                           .get(),
                       builder: (context, snap) {
-                        if (!snap.hasData) {
-                          return const SizedBox(
-                            height: 60,
-                            child: Center(
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
+                        if (!snap.hasData)
+                          return const Center(
+                            child: CircularProgressIndicator(strokeWidth: 2),
                           );
-                        }
                         final seller =
                             snap.data!.data() as Map<String, dynamic>?;
                         if (seller == null) return const SizedBox();
                         return Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
+                            gradient: LinearGradient(
+                              colors: [
+                                _navy.withOpacity(0.05),
+                                _navy.withOpacity(0.02),
+                              ],
+                            ),
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: Colors.blue.shade100),
+                            border: Border.all(color: _navy.withOpacity(0.1)),
                           ),
                           child: Row(
                             children: [
                               CircleAvatar(
-                                radius: 28,
-                                backgroundColor: Colors.blue.shade700,
+                                radius: 30,
+                                backgroundColor: _navy,
                                 child: Text(
                                   (seller['username'] ?? '?')
                                       .toString()
@@ -598,7 +742,7 @@ class _ProductDetailSheet extends StatelessWidget {
                                       .toUpperCase(),
                                   style: const TextStyle(
                                     color: Colors.white,
-                                    fontSize: 20,
+                                    fontSize: 22,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -615,49 +759,20 @@ class _ProductDetailSheet extends StatelessWidget {
                                       style: const TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
+                                        color: Color(0xFF111827),
                                       ),
                                     ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.phone,
-                                          size: 14,
-                                          color: Colors.blue.shade700,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          seller['phone'] ?? 'N/A',
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            color: Colors.blue.shade700,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
+                                    const SizedBox(height: 5),
+                                    _sellerRow(
+                                      Icons.phone,
+                                      seller['phone'] ?? 'N/A',
+                                      Colors.green.shade700,
                                     ),
-                                    const SizedBox(height: 2),
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.location_on,
-                                          size: 14,
-                                          color: Colors.grey.shade500,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Expanded(
-                                          child: Text(
-                                            seller['location']?['name'] ??
-                                                'N/A',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey.shade500,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      ],
+                                    const SizedBox(height: 3),
+                                    _sellerRow(
+                                      Icons.location_on,
+                                      seller['location']?['name'] ?? 'N/A',
+                                      Colors.orange.shade700,
                                     ),
                                   ],
                                 ),
@@ -672,28 +787,36 @@ class _ProductDetailSheet extends StatelessWidget {
                   const SizedBox(height: 28),
                   SizedBox(
                     width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              lang.isSwahili
-                                  ? 'Imeongezwa kwenye magulio!'
-                                  : 'Added to cart!',
+                    height: 54,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        await CartService().addToCart(product);
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                lang.isSwahili
+                                    ? 'Imeongezwa kwenye magulio!'
+                                    : 'Added to cart!',
+                              ),
+                              backgroundColor: _navy,
+                              action: SnackBarAction(
+                                label: lang.isSwahili ? 'Tazama' : 'View Cart',
+                                textColor: Colors.white,
+                                onPressed: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const CartScreen(),
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
-                        );
+                          );
+                        }
                       },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue.shade700,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                      ),
-                      child: Text(
+                      icon: const Icon(Icons.shopping_cart_outlined),
+                      label: Text(
                         lang.isSwahili
                             ? 'Ongeza kwenye Magulio'
                             : 'Add to Cart',
@@ -702,8 +825,17 @@ class _ProductDetailSheet extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _navy,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 0,
+                      ),
                     ),
                   ),
+                  const SizedBox(height: 8),
                 ],
               ),
             ),
@@ -713,28 +845,54 @@ class _ProductDetailSheet extends StatelessWidget {
     );
   }
 
-  Widget _infoChip(IconData icon, String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: color,
-              fontWeight: FontWeight.w600,
-            ),
+  Widget _sectionTitle(String title) => Text(
+    title,
+    style: const TextStyle(
+      fontSize: 16,
+      fontWeight: FontWeight.bold,
+      color: Color(0xFF111827),
+    ),
+  );
+
+  Widget _chip(IconData icon, String label, Color color) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(8),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: color),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: color,
+            fontWeight: FontWeight.w600,
           ),
-        ],
+        ),
+      ],
+    ),
+  );
+
+  Widget _sellerRow(IconData icon, String text, Color color) => Row(
+    children: [
+      Icon(icon, size: 13, color: color),
+      const SizedBox(width: 5),
+      Expanded(
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 13,
+            color: color,
+            fontWeight: FontWeight.w500,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
-    );
-  }
+    ],
+  );
 }
