@@ -70,7 +70,6 @@ class OrdersScreen extends StatelessWidget {
         stream: FirebaseFirestore.instance
             .collection('orders')
             .where('customerId', isEqualTo: uid)
-            .orderBy('createdAt', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {

@@ -43,7 +43,7 @@ class CartService {
   }
 
   // Stream cart items
-  Stream<QuerySnapshot> cartStream() => _cart.orderBy('addedAt').snapshots();
+  Stream<QuerySnapshot> cartStream() => _cart.snapshots();
 
   // Place order
   Future<void> placeOrder(
@@ -61,9 +61,12 @@ class CartService {
       'createdAt': FieldValue.serverTimestamp(),
     });
 
-    // Clear cart
+    // Clear cart - use 'id' (cart doc id) or 'productId' field
     for (final item in items) {
-      batch.delete(_cart.doc(item['productId']));
+      final cartDocId = item['id'] ?? item['productId'];
+      if (cartDocId != null) {
+        batch.delete(_cart.doc(cartDocId));
+      }
     }
 
     await batch.commit();

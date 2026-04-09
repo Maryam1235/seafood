@@ -401,7 +401,11 @@ class _ProductCard extends StatelessWidget {
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
-        builder: (_) => _ProductDetailSheet(product: product, lang: lang),
+        builder: (_) => _ProductDetailSheet(
+          product: product,
+          lang: lang,
+          rootContext: context,
+        ),
       ),
       child: Container(
         decoration: BoxDecoration(
@@ -544,7 +548,12 @@ class _ProductCard extends StatelessWidget {
 class _ProductDetailSheet extends StatelessWidget {
   final Map<String, dynamic> product;
   final LanguageProvider lang;
-  const _ProductDetailSheet({required this.product, required this.lang});
+  final BuildContext rootContext;
+  const _ProductDetailSheet({
+    required this.product,
+    required this.lang,
+    required this.rootContext,
+  });
 
   static const _navy = Color(0xFF1E1B4B);
 
@@ -572,7 +581,6 @@ class _ProductDetailSheet extends StatelessWidget {
         child: ListView(
           controller: controller,
           children: [
-            // Handle bar
             Center(
               child: Container(
                 margin: const EdgeInsets.only(top: 10, bottom: 4),
@@ -584,15 +592,12 @@ class _ProductDetailSheet extends StatelessWidget {
                 ),
               ),
             ),
-            // Product image
             if (imageUrl != null)
-              ClipRRect(
-                child: Image.network(
-                  imageUrl,
-                  height: 240,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
+              Image.network(
+                imageUrl,
+                height: 240,
+                width: double.infinity,
+                fit: BoxFit.cover,
               )
             else
               Container(
@@ -604,13 +609,11 @@ class _ProductDetailSheet extends StatelessWidget {
                   color: Colors.grey.shade300,
                 ),
               ),
-
             Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Name + category
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -646,7 +649,6 @@ class _ProductDetailSheet extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  // Price
                   Text(
                     'TShs ${price?.toStringAsFixed(0) ?? '0'} / $unit',
                     style: const TextStyle(
@@ -656,7 +658,6 @@ class _ProductDetailSheet extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  // Stock + location chips
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -673,8 +674,6 @@ class _ProductDetailSheet extends StatelessWidget {
                       ),
                     ],
                   ),
-
-                  // Description
                   if (description.isNotEmpty) ...[
                     const SizedBox(height: 20),
                     _sectionTitle(lang.isSwahili ? 'Maelezo' : 'Description'),
@@ -695,8 +694,6 @@ class _ProductDetailSheet extends StatelessWidget {
                       ),
                     ),
                   ],
-
-                  // Seller info
                   if (sellerId != null) ...[
                     const SizedBox(height: 20),
                     _sectionTitle(
@@ -721,12 +718,7 @@ class _ProductDetailSheet extends StatelessWidget {
                         return Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                _navy.withOpacity(0.05),
-                                _navy.withOpacity(0.02),
-                              ],
-                            ),
+                            color: _navy.withOpacity(0.04),
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(color: _navy.withOpacity(0.1)),
                           ),
@@ -759,7 +751,6 @@ class _ProductDetailSheet extends StatelessWidget {
                                       style: const TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
-                                        color: Color(0xFF111827),
                                       ),
                                     ),
                                     const SizedBox(height: 5),
@@ -783,7 +774,6 @@ class _ProductDetailSheet extends StatelessWidget {
                       },
                     ),
                   ],
-
                   const SizedBox(height: 28),
                   SizedBox(
                     width: double.infinity,
@@ -793,7 +783,7 @@ class _ProductDetailSheet extends StatelessWidget {
                         await CartService().addToCart(product);
                         if (context.mounted) {
                           Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ScaffoldMessenger.of(rootContext).showSnackBar(
                             SnackBar(
                               content: Text(
                                 lang.isSwahili
@@ -805,7 +795,7 @@ class _ProductDetailSheet extends StatelessWidget {
                                 label: lang.isSwahili ? 'Tazama' : 'View Cart',
                                 textColor: Colors.white,
                                 onPressed: () => Navigator.push(
-                                  context,
+                                  rootContext,
                                   MaterialPageRoute(
                                     builder: (_) => const CartScreen(),
                                   ),
