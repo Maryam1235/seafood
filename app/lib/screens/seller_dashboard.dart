@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
 import 'seller_products_page.dart';
 import 'profile_screen.dart';
+import 'seller_orders_screen.dart';
 
 class SellerDashboard extends StatefulWidget {
   const SellerDashboard({super.key});
@@ -49,7 +51,7 @@ class _SellerDashboardState extends State<SellerDashboard> {
     final pages = [
       _SellerHomePage(userData: _userData, lang: lang, onLogout: _logout),
       SellerProductsPage(lang: lang),
-      _OrdersPage(lang: lang),
+      const SellerOrdersScreen(),
       ProfileScreen(themeColor: const Color(0xFF1E1B4B), roleIcon: Icons.store),
     ];
 
@@ -129,36 +131,78 @@ class _SellerHomePage extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
-              decoration: const BoxDecoration(
-                color: Color(0xFF1E1B4B),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(32),
-                  bottomRight: Radius.circular(32),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _StatCard(
-                    label: lang.t('my_products'),
-                    value: '0',
-                    icon: Icons.inventory,
-                  ),
-                  _StatCard(
-                    label: lang.t('orders'),
-                    value: '0',
-                    icon: Icons.shopping_bag,
-                  ),
-                  _StatCard(
-                    label: lang.t('earnings'),
-                    value: '0',
-                    icon: Icons.attach_money,
-                  ),
-                ],
-              ),
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('products')
+                  .where(
+                    'sellerId',
+                    isEqualTo: FirebaseAuth.instance.currentUser?.uid,
+                  )
+                  .snapshots(),
+              builder: (context, productSnap) {
+                return StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('orders')
+                      .snapshots(),
+                  builder: (context, orderSnap) {
+                    final uid = FirebaseAuth.instance.currentUser?.uid;
+                    final productCount = productSnap.data?.docs.length ?? 0;
+                    int orderCount = 0;
+                    double earnings = 0;
+                    if (orderSnap.hasData) {
+                      for (final doc in orderSnap.data!.docs) {
+                        final data = doc.data() as Map<String, dynamic>;
+                        final items = (data['items'] as List?) ?? [];
+                        final myItems = items
+                            .where((i) => i['sellerId'] == uid)
+                            .toList();
+                        if (myItems.isNotEmpty) {
+                          orderCount++;
+                          if (data['status'] == 'delivered') {
+                            earnings += myItems.fold<double>(
+                              0,
+                              (sum, i) =>
+                                  sum +
+                                  ((i['price'] ?? 0) * (i['quantity'] ?? 1)),
+                            );
+                          }
+                        }
+                      }
+                    }
+                    return Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF1E1B4B),
+                        borderRadius: BorderRadius.only(
+                          bottomLeft: Radius.circular(32),
+                          bottomRight: Radius.circular(32),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _StatCard(
+                            label: lang.t('my_products'),
+                            value: '$productCount',
+                            icon: Icons.inventory,
+                          ),
+                          _StatCard(
+                            label: lang.t('orders'),
+                            value: '$orderCount',
+                            icon: Icons.shopping_bag,
+                          ),
+                          _StatCard(
+                            label: lang.t('earnings'),
+                            value: 'TShs ${earnings.toStringAsFixed(0)}',
+                            icon: Icons.attach_money,
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
             ),
             const SizedBox(height: 24),
             Padding(
