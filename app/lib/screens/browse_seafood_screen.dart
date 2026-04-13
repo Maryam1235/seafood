@@ -34,8 +34,9 @@ class _BrowseSeafoodScreenState extends State<BrowseSeafoodScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       final data = await _authService.getUserData(user.uid);
-      if (mounted && data != null)
+      if (mounted && data != null) {
         setState(() => _username = data['username'] ?? '');
+      }
     }
   }
 
@@ -708,10 +709,11 @@ class _ProductDetailSheet extends StatelessWidget {
                           .doc(sellerId)
                           .get(),
                       builder: (context, snap) {
-                        if (!snap.hasData)
+                        if (!snap.hasData) {
                           return const Center(
                             child: CircularProgressIndicator(strokeWidth: 2),
                           );
+                        }
                         final seller =
                             snap.data!.data() as Map<String, dynamic>?;
                         if (seller == null) return const SizedBox();
