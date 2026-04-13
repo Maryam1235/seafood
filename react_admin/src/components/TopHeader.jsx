@@ -5,6 +5,7 @@ const pageTitles = {
   overview: 'Dashboard',
   users: 'User Management',
   products: 'Product Management',
+  orders: 'Order Management',
   settings: 'Settings',
 };
 

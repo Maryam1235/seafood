@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Users, ShoppingCart, Store, Truck, Fish, CheckCircle } from 'lucide-react';
+import { Users, ShoppingCart, Store, Truck, Fish, CheckCircle, ShoppingBag } from 'lucide-react';
 import styles from './Overview.module.css';
 
 export default function Overview() {
   const [stats, setStats] = useState({ total: 0, customers: 0, sellers: 0, drivers: 0 });
   const [productStats, setProductStats] = useState({ total: 0, active: 0 });
+  const [orderStats, setOrderStats] = useState({ total: 0, pending: 0 });
 
   useEffect(() => {
     const unsub1 = onSnapshot(collection(db, 'users'), (snap) => {
@@ -20,12 +21,13 @@ export default function Overview() {
     });
     const unsub2 = onSnapshot(collection(db, 'products'), (snap) => {
       const products = snap.docs.map(d => d.data());
-      setProductStats({
-        total: products.length,
-        active: products.filter(p => p.isAvailable).length,
-      });
+      setProductStats({ total: products.length, active: products.filter(p => p.isAvailable).length });
     });
-    return () => { unsub1(); unsub2(); };
+    const unsub3 = onSnapshot(collection(db, 'orders'), (snap) => {
+      const orders = snap.docs.map(d => d.data());
+      setOrderStats({ total: orders.length, pending: orders.filter(o => o.status === 'pending').length });
+    });
+    return () => { unsub1(); unsub2(); unsub3(); };
   }, []);
 
   const cards = [
@@ -35,6 +37,8 @@ export default function Overview() {
     { label: 'Drivers',          value: stats.drivers,        Icon: Truck,        color: '#0891b2' },
     { label: 'Total Products',   value: productStats.total,   Icon: Fish,         color: '#7c3aed' },
     { label: 'Active Products',  value: productStats.active,  Icon: CheckCircle,  color: '#16a34a' },
+    { label: 'Total Orders',     value: orderStats.total,     Icon: ShoppingBag,  color: '#dc2626' },
+    { label: 'Pending Orders',   value: orderStats.pending,   Icon: ShoppingBag,  color: '#ea580c' },
   ];
 
   return (

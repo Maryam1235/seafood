@@ -4,6 +4,7 @@ import TopHeader from '../components/TopHeader';
 import Overview from '../components/Overview';
 import UsersTable from '../components/UsersTable';
 import ProductsTable from '../components/ProductsTable';
+import OrdersTable from '../components/OrdersTable';
 import Settings from '../components/Settings';
 import AddUser from './AddUser';
 import EditUser from './EditUser';
@@ -38,6 +39,7 @@ export default function Dashboard() {
         onAddProduct={() => setSubPage({ type: 'addProduct' })}
         onEditProduct={(product) => setSubPage({ type: 'editProduct', product })}
       />;
+      case 'orders': return <OrdersTable />;
       case 'settings': return <Settings />;
       default: return <Overview />;
     }

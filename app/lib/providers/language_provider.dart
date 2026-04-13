@@ -89,7 +89,7 @@ class LanguageProvider extends ChangeNotifier {
       'online': 'You are Online',
       'offline': 'You are Offline',
       'coming_soon': 'Coming Soon',
-      'dashboard': 'Dashboard',
+      'dashboard': 'Home',
       'quick_actions': 'Quick Actions',
       'offers': 'Offers',
       'support': 'Support',
@@ -209,7 +209,7 @@ class LanguageProvider extends ChangeNotifier {
       'online': 'Uko Mtandaoni',
       'offline': 'Uko Nje ya Mtandao',
       'coming_soon': 'Inakuja Hivi Karibuni',
-      'dashboard': 'Dashibodi',
+      'dashboard': 'Nyumbani',
       'quick_actions': 'Vitendo vya Haraka',
       'offers': 'Ofa',
       'support': 'Msaada',
@@ -268,3 +268,4 @@ class LanguageProvider extends ChangeNotifier {
     },
   };
 }
+
