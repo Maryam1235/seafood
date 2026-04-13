@@ -21,7 +21,10 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
       const BrowseSeafoodScreen(),
       const OrdersScreen(),
       _FavoritesPage(lang: lang),
-      ProfileScreen(themeColor: Colors.blue.shade700, roleIcon: Icons.person),
+      ProfileScreen(
+        themeColor: const Color(0xFF3730A3),
+        roleIcon: Icons.person,
+      ),
     ];
 
     return Scaffold(
@@ -30,7 +33,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
         currentIndex: _currentIndex,
         onTap: (i) => setState(() => _currentIndex = i),
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.blue.shade700,
+        selectedItemColor: const Color(0xFF3730A3),
         unselectedItemColor: Colors.grey,
         items: [
           BottomNavigationBarItem(
@@ -64,8 +67,18 @@ class _FavoritesPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(lang.t('favorites')),
-        backgroundColor: Colors.blue.shade700,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF1E1B4B), Color(0xFF3730A3)],
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
+        elevation: 0,
       ),
       body: Center(
         child: Column(

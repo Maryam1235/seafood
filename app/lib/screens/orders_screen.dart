@@ -7,7 +7,7 @@ import '../providers/language_provider.dart';
 class OrdersScreen extends StatelessWidget {
   const OrdersScreen({super.key});
 
-  static const _navy = Color(0xFF1E1B4B);
+  static const _navy = Color(0xFF3730A3);
 
   Color _statusColor(String status) {
     switch (status) {
@@ -62,7 +62,16 @@ class OrdersScreen extends StatelessWidget {
       backgroundColor: const Color(0xFFF5F6FA),
       appBar: AppBar(
         title: Text(lang.t('my_orders')),
-        backgroundColor: _navy,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF1E1B4B), Color(0xFF3730A3)],
+            ),
+          ),
+        ),
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
       ),
