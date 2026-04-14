@@ -192,7 +192,7 @@ export default function UsersTable({ onAddUser, onEditUser }) {
                 ['Phone', viewUser.phone],
                 ['Role', viewUser.role?.toUpperCase()],
                 ['Status', viewUser.active === false ? 'Inactive' : 'Active'],
-                ['Location', viewUser.location?.name || 
+                ['Location', viewUser.location?.name ||
                   (viewUser.location ? `${viewUser.location.latitude?.toFixed(5)}, ${viewUser.location.longitude?.toFixed(5)}` : 'Not available')],
                 ['Created', viewUser.createdAt?.seconds
                   ? new Date(viewUser.createdAt.seconds * 1000).toLocaleDateString()
@@ -204,6 +204,96 @@ export default function UsersTable({ onAddUser, onEditUser }) {
                 </div>
               ))}
             </div>
+
+            {/* Driver Profile Section */}
+            {viewUser.role === 'driver' && (
+              <div className={styles.driverSection}>
+                <div className={styles.driverSectionTitle}>
+                  🚗 Driver Profile
+                  {viewUser.driverProfile && (
+                    <span className={`${styles.driverStatus} ${
+                      viewUser.driverProfile.status === 'approved' ? styles.approved :
+                      viewUser.driverProfile.status === 'rejected' ? styles.rejected : styles.pending
+                    }`}>
+                      {viewUser.driverProfile.status?.toUpperCase() || 'PENDING'}
+                    </span>
+                  )}
+                </div>
+
+                {!viewUser.driverProfile ? (
+                  <p className={styles.noProfile}>Driver has not submitted profile yet.</p>
+                ) : (
+                  <>
+                    {[
+                      ['Date of Birth', viewUser.driverProfile.dateOfBirth],
+                      ['National ID', viewUser.driverProfile.nationalId],
+                      ['License Number', viewUser.driverProfile.licenseNumber],
+                      ['Vehicle Type', viewUser.driverProfile.vehicleType],
+                      ['License Plate', viewUser.driverProfile.licensePlate],
+                      ['Emergency Contact', viewUser.driverProfile.emergencyContact],
+                    ].map(([label, value]) => (
+                      <div key={label} className={styles.viewRow}>
+                        <span className={styles.viewLabel}>{label}</span>
+                        <span className={styles.viewValue}>{value || 'N/A'}</span>
+                      </div>
+                    ))}
+
+                    {/* Document images */}
+                    <div className={styles.docsTitle}>Documents</div>
+                    <div className={styles.docsGrid}>
+                      {[
+                        ['National ID', viewUser.driverProfile.idCardUrl],
+                        ['Driver License', viewUser.driverProfile.licenseUrl],
+                        ['DC Letter', viewUser.driverProfile.dcLetterUrl],
+                      ].map(([label, url]) => (
+                        <div key={label} className={styles.docItem}>
+                          <div className={styles.docLabel}>{label}</div>
+                          {url
+                            ? <a href={url} target="_blank" rel="noreferrer">
+                                <img src={url} alt={label} className={styles.docImg} />
+                              </a>
+                            : <div className={styles.noDoc}>Not uploaded</div>
+                          }
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Approve / Reject buttons */}
+                    {viewUser.driverProfile.status !== 'approved' && (
+                      <div className={styles.driverActions}>
+                        <button
+                          className={styles.rejectBtn}
+                          onClick={async () => {
+                            const { doc, updateDoc } = await import('firebase/firestore');
+                            const { db } = await import('../firebase');
+                            await updateDoc(doc(db, 'users', viewUser.id), {
+                              'driverProfile.status': 'rejected'
+                            });
+                            setViewUser({...viewUser, driverProfile: {...viewUser.driverProfile, status: 'rejected'}});
+                          }}
+                        >
+                          ✕ Reject
+                        </button>
+                        <button
+                          className={styles.approveBtn}
+                          onClick={async () => {
+                            const { doc, updateDoc } = await import('firebase/firestore');
+                            const { db } = await import('../firebase');
+                            await updateDoc(doc(db, 'users', viewUser.id), {
+                              'driverProfile.status': 'approved'
+                            });
+                            setViewUser({...viewUser, driverProfile: {...viewUser.driverProfile, status: 'approved'}});
+                          }}
+                        >
+                          ✓ Approve
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
             <div className={styles.modalFooter}>
               <button className={styles.cancelBtn} onClick={() => setViewUser(null)}>Close</button>
             </div>
