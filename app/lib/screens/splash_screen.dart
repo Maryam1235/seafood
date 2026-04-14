@@ -8,6 +8,7 @@ import 'login_screen.dart';
 import 'customer_dashboard.dart';
 import 'seller_dashboard.dart';
 import 'driver_dashboard.dart';
+import 'driver_profile_setup_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -105,7 +106,10 @@ class _SplashScreenState extends State<SplashScreen>
     if (role == 'seller') {
       destination = const SellerDashboard();
     } else if (role == 'driver') {
-      destination = const DriverDashboard();
+      final profileComplete = doc.data()?['profileComplete'] ?? false;
+      destination = profileComplete
+          ? const DriverDashboard()
+          : const DriverProfileSetupScreen();
     } else {
       destination = const CustomerDashboard();
     }

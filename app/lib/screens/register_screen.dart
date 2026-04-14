@@ -185,7 +185,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     lang.t('full_name'),
                     Icons.person_outline,
                   ),
-                  validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
+                  validator: (v) {
+                    if (v?.isEmpty ?? true) return 'Required';
+                    if (RegExp(r'\d').hasMatch(v!))
+                      return lang.isSwahili
+                          ? 'Jina haliwezi kuwa na nambari'
+                          : 'Name cannot contain numbers';
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 14),
                 TextFormField(
@@ -199,11 +206,39 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 14),
                 TextFormField(
                   controller: _phoneController,
-                  decoration: _fieldDecoration(lang.t('phone'), Icons.phone),
+                  decoration: _fieldDecoration(lang.t('phone'), Icons.phone)
+                      .copyWith(
+                        prefixIcon: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 12),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('🇹🇿', style: TextStyle(fontSize: 18)),
+                              SizedBox(width: 4),
+                              Text(
+                                '+255',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        prefix: null,
+                      ),
                   keyboardType: TextInputType.phone,
+                  maxLength: 9,
+                  buildCounter:
+                      (
+                        _, {
+                        required currentLength,
+                        required isFocused,
+                        maxLength,
+                      }) => null,
                   validator: (v) {
                     if (v?.isEmpty ?? true) return 'Required';
-                    if (v!.length < 10) return 'Invalid phone';
+                    if (v!.length != 9) return 'Must be 9 digits';
                     return null;
                   },
                 ),

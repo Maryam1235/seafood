@@ -12,6 +12,7 @@ import 'forgot_password_screen.dart';
 import 'customer_dashboard.dart';
 import 'seller_dashboard.dart';
 import 'driver_dashboard.dart';
+import 'driver_profile_setup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -104,7 +105,11 @@ class _LoginScreenState extends State<LoginScreen> {
       if (role == 'seller') {
         destination = const SellerDashboard();
       } else if (role == 'driver') {
-        destination = const DriverDashboard();
+        // Check if driver has completed profile
+        final profileComplete = doc.data()?['profileComplete'] ?? false;
+        destination = profileComplete
+            ? const DriverDashboard()
+            : const DriverProfileSetupScreen();
       } else {
         destination = const CustomerDashboard();
       }

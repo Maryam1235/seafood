@@ -31,7 +31,7 @@ class AuthService {
       await _firestore.collection('users').doc(userCredential.user!.uid).set({
         'fullName': fullName,
         'username': username,
-        'phone': phone,
+        'phone': '+255${phone.replaceAll(RegExp(r'^0'), '')}',
         'email': email,
         'role': role,
         'createdAt': FieldValue.serverTimestamp(),
