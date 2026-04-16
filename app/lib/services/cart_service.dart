@@ -46,7 +46,7 @@ class CartService {
   Stream<QuerySnapshot> cartStream() => _cart.snapshots();
 
   // Place order
-  Future<void> placeOrder(
+  Future<String> placeOrder(
     List<Map<String, dynamic>> items,
     double total,
   ) async {
@@ -61,7 +61,7 @@ class CartService {
       'createdAt': FieldValue.serverTimestamp(),
     });
 
-    // Clear cart - use 'id' (cart doc id) or 'productId' field
+    // Clear cart
     for (final item in items) {
       final cartDocId = item['id'] ?? item['productId'];
       if (cartDocId != null) {
@@ -70,5 +70,6 @@ class CartService {
     }
 
     await batch.commit();
+    return orderRef.id;
   }
 }

@@ -229,13 +229,43 @@ class _DriverProfileSetupScreenState extends State<DriverProfileSetupScreen> {
                           ? 'Taarifa Binafsi'
                           : 'Personal Information',
                       children: [
-                        _field(
-                          _dobController,
-                          lang.isSwahili
-                              ? 'Tarehe ya Kuzaliwa'
-                              : 'Date of Birth',
-                          Icons.cake_outlined,
-                          hint: 'DD/MM/YYYY',
+                        GestureDetector(
+                          onTap: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: DateTime(2000),
+                              firstDate: DateTime(1950),
+                              lastDate: DateTime.now().subtract(
+                                const Duration(days: 365 * 18),
+                              ),
+                              builder: (context, child) => Theme(
+                                data: Theme.of(context).copyWith(
+                                  colorScheme: const ColorScheme.light(
+                                    primary: Color(0xFF1E1B4B),
+                                  ),
+                                ),
+                                child: child!,
+                              ),
+                            );
+                            if (picked != null) {
+                              setState(() {
+                                _dobController.text =
+                                    '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
+                              });
+                            }
+                          },
+                          child: AbsorbPointer(
+                            child: _field(
+                              _dobController,
+                              lang.isSwahili
+                                  ? 'Tarehe ya Kuzaliwa'
+                                  : 'Date of Birth',
+                              Icons.calendar_today_outlined,
+                              hint: lang.isSwahili
+                                  ? 'Gusa kuchagua tarehe'
+                                  : 'Tap to select date',
+                            ),
+                          ),
                         ),
                         _field(
                           _nationalIdController,

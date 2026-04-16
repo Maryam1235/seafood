@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
 import '../services/cart_service.dart';
-import 'orders_screen.dart';
+import 'delivery_selection_screen.dart';
 
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
@@ -319,11 +319,14 @@ class CartScreen extends StatelessWidget {
     );
 
     if (confirm == true) {
-      await cartService.placeOrder(items, total);
+      final orderId = await cartService.placeOrder(items, total);
       if (context.mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const OrdersScreen()),
+          MaterialPageRoute(
+            builder: (_) =>
+                DeliverySelectionScreen(orderId: orderId, orderTotal: total),
+          ),
         );
       }
     }
