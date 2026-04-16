@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
+import '../services/notification_service.dart';
 import 'orders_screen.dart';
 
 class DeliverySelectionScreen extends StatefulWidget {
@@ -149,6 +150,25 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
             'grandTotal': widget.orderTotal + cost,
             'status': 'confirmed',
           });
+
+      // Send notification to driver
+      final customerDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(FirebaseAuth.instance.currentUser?.uid)
+          .get();
+      final customerName =
+          customerDoc.data()?['fullName'] ??
+          customerDoc.data()?['username'] ??
+          'Customer';
+
+      await NotificationService.sendDeliveryNotification(
+        driverId: _selectedDriverId!,
+        orderId: widget.orderId,
+        customerName: customerName,
+        orderTotal: (widget.orderTotal + cost).toStringAsFixed(0),
+        vehicleType: driver['driverProfile']?['vehicleType'] ?? '',
+      );
+
       if (mounted) {
         Navigator.pushReplacement(
           context,

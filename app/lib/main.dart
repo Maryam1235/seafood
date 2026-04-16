@@ -3,15 +3,18 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'providers/language_provider.dart';
 import 'screens/splash_screen.dart';
+import 'services/notification_service.dart';
 import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // Load language before app starts
   final languageProvider = LanguageProvider();
   await languageProvider.init();
+
+  // Initialize notifications
+  await NotificationService.init();
 
   runApp(MyApp(languageProvider: languageProvider));
 }

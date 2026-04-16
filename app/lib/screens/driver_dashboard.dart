@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
 import 'profile_screen.dart';
+import 'driver_notifications_screen.dart';
 
 class DriverDashboard extends StatefulWidget {
   const DriverDashboard({super.key});
@@ -54,6 +56,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
         onToggle: (v) => setState(() => _isOnline = v),
         onLogout: _logout,
       ),
+      const DriverNotificationsScreen(),
       _DeliveriesPage(lang: lang),
       _EarningsPage(lang: lang),
       ProfileScreen(
@@ -71,9 +74,54 @@ class _DriverDashboardState extends State<DriverDashboard> {
         selectedItemColor: Colors.teal.shade700,
         unselectedItemColor: Colors.grey,
         items: [
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.dashboard),
+            label: lang.t('home'),
+          ),
+          // Notifications with badge
+          BottomNavigationBarItem(
+            icon: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('notifications')
+                  .where(
+                    'userId',
+                    isEqualTo: FirebaseAuth.instance.currentUser?.uid,
+                  )
+                  .where('read', isEqualTo: false)
+                  .snapshots(),
+              builder: (context, snap) {
+                final count = snap.data?.docs.length ?? 0;
+                return Stack(
+                  children: [
+                    const Icon(Icons.notifications_outlined),
+                    if (count > 0)
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          width: 16,
+                          height: 16,
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              '$count',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+            label: lang.isSwahili ? 'Arifa' : 'Alerts',
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.local_shipping),
@@ -408,4 +456,3 @@ class _EarningsPage extends StatelessWidget {
     );
   }
 }
-
