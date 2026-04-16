@@ -1,5 +1,7 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
 import 'orders_screen.dart';
@@ -25,44 +27,112 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
 
   String? _selectedDriverId;
   bool _isLoading = false;
+  Map<String, dynamic>? _customerLocation;
 
-  // Delivery cost based on vehicle type
-  double _deliveryCost(String vehicleType) {
-    switch (vehicleType.toLowerCase()) {
+  @override
+  void initState() {
+    super.initState();
+    _loadCustomerLocation();
+  }
+
+  Future<void> _loadCustomerLocation() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    final doc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .get();
+    if (doc.exists && mounted) {
+      setState(
+        () => _customerLocation =
+            doc.data()?['location'] as Map<String, dynamic>?,
+      );
+    }
+  }
+
+  // Haversine formula - distance in km
+  double _distanceKm(double lat1, double lon1, double lat2, double lon2) {
+    const R = 6371.0;
+    final dLat = _rad(lat2 - lat1);
+    final dLon = _rad(lon2 - lon1);
+    final a =
+        sin(dLat / 2) * sin(dLat / 2) +
+        cos(_rad(lat1)) * cos(_rad(lat2)) * sin(dLon / 2) * sin(dLon / 2);
+    return R * 2 * atan2(sqrt(a), sqrt(1 - a));
+  }
+
+  double _rad(double deg) => deg * pi / 180;
+
+  // Rate per km by vehicle type (TShs)
+  double _ratePerKm(String v) {
+    switch (v.toLowerCase()) {
+      case 'bicycle':
+        return 300;
+      case 'motorcycle':
+        return 500;
+      case 'car':
+        return 800;
+      default:
+        return 1200; // pickup
+    }
+  }
+
+  // Minimum cost by vehicle type
+  double _minCost(String v) {
+    switch (v.toLowerCase()) {
       case 'bicycle':
         return 1000;
       case 'motorcycle':
         return 2000;
       case 'car':
-        return 5000;
-      case 'pickup':
-      case 'pickup truck':
-        return 8000;
+        return 4000;
       default:
-        return 3000;
+        return 6000;
     }
   }
 
-  String _vehicleIcon(String vehicleType) {
-    switch (vehicleType.toLowerCase()) {
+  // Calculate cost based on distance
+  double _calcCost(String vehicleType, Map<String, dynamic>? driverLoc) {
+    if (_customerLocation == null || driverLoc == null)
+      return _minCost(vehicleType);
+    final cLat = (_customerLocation!['latitude'] as num).toDouble();
+    final cLon = (_customerLocation!['longitude'] as num).toDouble();
+    final dLat = (driverLoc['latitude'] as num?)?.toDouble();
+    final dLon = (driverLoc['longitude'] as num?)?.toDouble();
+    if (dLat == null || dLon == null) return _minCost(vehicleType);
+    final dist = _distanceKm(cLat, cLon, dLat, dLon);
+    final cost = dist * _ratePerKm(vehicleType);
+    final rounded = (cost / 100).ceil() * 100.0;
+    return rounded < _minCost(vehicleType) ? _minCost(vehicleType) : rounded;
+  }
+
+  String _distLabel(Map<String, dynamic>? driverLoc) {
+    if (_customerLocation == null || driverLoc == null) return '';
+    final cLat = (_customerLocation!['latitude'] as num).toDouble();
+    final cLon = (_customerLocation!['longitude'] as num).toDouble();
+    final dLat = (driverLoc['latitude'] as num?)?.toDouble();
+    final dLon = (driverLoc['longitude'] as num?)?.toDouble();
+    if (dLat == null || dLon == null) return '';
+    final dist = _distanceKm(cLat, cLon, dLat, dLon);
+    return '${dist.toStringAsFixed(1)} km';
+  }
+
+  String _vehicleIcon(String v) {
+    switch (v.toLowerCase()) {
       case 'bicycle':
-        return '🚲';
+        return '�';
       case 'motorcycle':
         return '🏍️';
       case 'car':
-        return '🚗';
-      case 'pickup':
-      case 'pickup truck':
-        return '🛻';
+        return '�';
       default:
-        return '🚐';
+        return '�';
     }
   }
 
-  Future<void> _confirmDelivery(Map<String, dynamic> driver) async {
+  Future<void> _confirm(Map<String, dynamic> driver, double cost) async {
     setState(() => _isLoading = true);
     try {
-      final cost = _deliveryCost(driver['driverProfile']?['vehicleType'] ?? '');
       await FirebaseFirestore.instance
           .collection('orders')
           .doc(widget.orderId)
@@ -79,7 +149,6 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
             'grandTotal': widget.orderTotal + cost,
             'status': 'confirmed',
           });
-
       if (mounted) {
         Navigator.pushReplacement(
           context,
@@ -93,11 +162,10 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
         );
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted)
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
-      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -146,8 +214,8 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
                         ),
                         Text(
                           lang.isSwahili
-                              ? 'Chagua dereva wa kukupelekea agizo lako'
-                              : 'Select a driver to deliver your order',
+                              ? 'Bei inakokotolewa kulingana na umbali wako'
+                              : 'Cost calculated based on your distance',
                           style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 13,
@@ -167,7 +235,7 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Order summary
+                  // Order subtotal card
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -202,11 +270,24 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
                             ),
                           ],
                         ),
-                        Icon(
-                          Icons.receipt_outlined,
-                          color: Colors.grey.shade400,
-                          size: 28,
-                        ),
+                        if (_customerLocation != null)
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.location_on,
+                                size: 14,
+                                color: Colors.green.shade600,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                _customerLocation!['name'] ?? 'Located',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.green.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
                       ],
                     ),
                   ),
@@ -224,7 +305,7 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
                   ),
                   const SizedBox(height: 12),
 
-                  // Fetch approved drivers
+                  // Drivers list
                   StreamBuilder<QuerySnapshot>(
                     stream: FirebaseFirestore.instance
                         .collection('users')
@@ -235,7 +316,6 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
                       }
-
                       if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                         return Container(
                           padding: const EdgeInsets.all(24),
@@ -254,7 +334,7 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
                                 const SizedBox(height: 12),
                                 Text(
                                   lang.isSwahili
-                                      ? 'Hakuna madereva wanaopatikana sasa'
+                                      ? 'Hakuna madereva sasa'
                                       : 'No drivers available right now',
                                   style: TextStyle(
                                     color: Colors.grey.shade500,
@@ -268,16 +348,16 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
                         );
                       }
 
-                      final drivers = snapshot.data!.docs;
-
                       return Column(
-                        children: drivers.map((doc) {
+                        children: snapshot.data!.docs.map((doc) {
                           final driver = doc.data() as Map<String, dynamic>;
                           final profile =
                               driver['driverProfile'] as Map<String, dynamic>?;
-                          final vehicleType =
-                              profile?['vehicleType'] ?? 'Unknown';
-                          final cost = _deliveryCost(vehicleType);
+                          final driverLoc =
+                              driver['location'] as Map<String, dynamic>?;
+                          final vehicle = profile?['vehicleType'] ?? 'Unknown';
+                          final cost = _calcCost(vehicle, driverLoc);
+                          final dist = _distLabel(driverLoc);
                           final selected = _selectedDriverId == doc.id;
 
                           return GestureDetector(
@@ -305,7 +385,6 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
                               ),
                               child: Row(
                                 children: [
-                                  // Avatar
                                   CircleAvatar(
                                     radius: 28,
                                     backgroundColor: selected
@@ -324,7 +403,6 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
                                     ),
                                   ),
                                   const SizedBox(width: 14),
-                                  // Driver info
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment:
@@ -346,19 +424,34 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
                                         Row(
                                           children: [
                                             Text(
-                                              _vehicleIcon(vehicleType),
+                                              _vehicleIcon(vehicle),
                                               style: const TextStyle(
                                                 fontSize: 16,
                                               ),
                                             ),
                                             const SizedBox(width: 4),
                                             Text(
-                                              vehicleType,
+                                              vehicle,
                                               style: TextStyle(
                                                 fontSize: 13,
                                                 color: Colors.grey.shade600,
                                               ),
                                             ),
+                                            if (dist.isNotEmpty) ...[
+                                              const SizedBox(width: 8),
+                                              Icon(
+                                                Icons.location_on,
+                                                size: 12,
+                                                color: Colors.orange.shade400,
+                                              ),
+                                              Text(
+                                                dist,
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  color: Colors.orange.shade600,
+                                                ),
+                                              ),
+                                            ],
                                           ],
                                         ),
                                         const SizedBox(height: 3),
@@ -404,7 +497,6 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
                                       ],
                                     ),
                                   ),
-                                  // Cost + radio
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
@@ -418,7 +510,6 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
                                               : const Color(0xFF111827),
                                         ),
                                       ),
-                                      const SizedBox(height: 4),
                                       Text(
                                         lang.isSwahili ? 'Utoaji' : 'Delivery',
                                         style: TextStyle(
@@ -463,7 +554,7 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
 
                   const SizedBox(height: 8),
 
-                  // Grand total
+                  // Grand total + confirm
                   if (_selectedDriverId != null)
                     FutureBuilder<DocumentSnapshot>(
                       future: FirebaseFirestore.instance
@@ -474,90 +565,87 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
                         if (!snap.hasData) return const SizedBox();
                         final driver =
                             snap.data!.data() as Map<String, dynamic>?;
-                        final vehicleType =
-                            driver?['driverProfile']?['vehicleType'] ?? '';
-                        final cost = _deliveryCost(vehicleType);
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 16),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: _navy.withOpacity(0.04),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: _navy.withOpacity(0.1)),
-                          ),
-                          child: Column(
-                            children: [
-                              _row(
-                                lang.isSwahili ? 'Bidhaa' : 'Products',
-                                'TShs ${widget.orderTotal.toStringAsFixed(0)}',
+                        final profile =
+                            driver?['driverProfile'] as Map<String, dynamic>?;
+                        final driverLoc =
+                            driver?['location'] as Map<String, dynamic>?;
+                        final vehicle = profile?['vehicleType'] ?? '';
+                        final cost = _calcCost(vehicle, driverLoc);
+
+                        return Column(
+                          children: [
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 16),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: _navy.withOpacity(0.04),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: _navy.withOpacity(0.1),
+                                ),
                               ),
-                              const SizedBox(height: 8),
-                              _row(
-                                lang.isSwahili ? 'Utoaji' : 'Delivery',
-                                'TShs ${cost.toStringAsFixed(0)}',
+                              child: Column(
+                                children: [
+                                  _row(
+                                    lang.isSwahili ? 'Bidhaa' : 'Products',
+                                    'TShs ${widget.orderTotal.toStringAsFixed(0)}',
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _row(
+                                    lang.isSwahili ? 'Utoaji' : 'Delivery',
+                                    'TShs ${cost.toStringAsFixed(0)}',
+                                  ),
+                                  const Divider(height: 20),
+                                  _row(
+                                    lang.isSwahili
+                                        ? 'Jumla Yote'
+                                        : 'Grand Total',
+                                    'TShs ${(widget.orderTotal + cost).toStringAsFixed(0)}',
+                                    bold: true,
+                                  ),
+                                ],
                               ),
-                              const Divider(height: 20),
-                              _row(
-                                lang.isSwahili ? 'Jumla Yote' : 'Grand Total',
-                                'TShs ${(widget.orderTotal + cost).toStringAsFixed(0)}',
-                                bold: true,
+                            ),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 54,
+                              child: ElevatedButton.icon(
+                                onPressed: _isLoading
+                                    ? null
+                                    : () => _confirm(driver ?? {}, cost),
+                                icon: _isLoading
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Icon(Icons.check_circle_outline),
+                                label: Text(
+                                  lang.isSwahili
+                                      ? 'Thibitisha Utoaji'
+                                      : 'Confirm Delivery',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _navy,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  elevation: 0,
+                                ),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         );
                       },
                     ),
-
-                  // Confirm button
-                  FutureBuilder<DocumentSnapshot?>(
-                    future: _selectedDriverId != null
-                        ? FirebaseFirestore.instance
-                              .collection('users')
-                              .doc(_selectedDriverId)
-                              .get()
-                        : Future.value(null),
-                    builder: (context, snap) {
-                      final driver = snap.data?.data() as Map<String, dynamic>?;
-                      return SizedBox(
-                        width: double.infinity,
-                        height: 54,
-                        child: ElevatedButton.icon(
-                          onPressed: (_selectedDriverId == null || _isLoading)
-                              ? null
-                              : () => _confirmDelivery(driver ?? {}),
-                          icon: _isLoading
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.check_circle_outline),
-                          label: Text(
-                            lang.isSwahili
-                                ? 'Thibitisha Utoaji'
-                                : 'Confirm Delivery',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _selectedDriverId != null
-                                ? _navy
-                                : Colors.grey.shade300,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            elevation: 0,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
                   const SizedBox(height: 24),
                 ],
               ),
