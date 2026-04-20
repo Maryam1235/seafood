@@ -7,6 +7,7 @@ import '../services/auth_service.dart';
 import 'login_screen.dart';
 import 'profile_screen.dart';
 import 'driver_notifications_screen.dart';
+import 'driver_deliveries_screen.dart';
 
 class DriverDashboard extends StatefulWidget {
   const DriverDashboard({super.key});
@@ -62,17 +63,19 @@ class _DriverDashboardState extends State<DriverDashboard> {
         onLogout: _logout,
         onOpenDrawer: _openDrawer,
       ),
-      DriverNotificationsScreen(onOpenDrawer: _openDrawer),
-      _DeliveriesPage(lang: lang, onOpenDrawer: _openDrawer),
-      _EarningsPage(lang: lang, onOpenDrawer: _openDrawer),
+      DriverNotificationsScreen(onOpenDrawer: _openDrawer), // 1
+      ActiveDeliveryScreen(onOpenDrawer: _openDrawer), // 2
+      AvailableOrdersScreen(onOpenDrawer: _openDrawer), // 3
+      DeliveryHistoryScreen(onOpenDrawer: _openDrawer), // 4
+      _EarningsPage(lang: lang, onOpenDrawer: _openDrawer), // 5
       ProfileScreen(
         themeColor: Colors.teal.shade700,
         roleIcon: Icons.delivery_dining,
-      ),
+      ), // 6
     ];
 
-    // Bottom nav: 0=Home, 1=Alerts, 2=Profile (maps to page indices 0,1,4)
-    final bottomIndex = _currentIndex == 4 ? 2 : (_currentIndex == 1 ? 1 : 0);
+    // Bottom nav: 0=Home, 1=Alerts, 2=Profile (maps to page indices 0,1,6)
+    final bottomIndex = _currentIndex == 6 ? 2 : (_currentIndex == 1 ? 1 : 0);
 
     return Scaffold(
       key: _scaffoldKey,
@@ -84,7 +87,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
         onTap: (i) => setState(() {
           if (i == 0) _currentIndex = 0;
           if (i == 1) _currentIndex = 1;
-          if (i == 2) _currentIndex = 4;
+          if (i == 2) _currentIndex = 6;
         }),
         selectedItemColor: Colors.teal.shade700,
         unselectedItemColor: Colors.grey,
@@ -247,15 +250,29 @@ class _DriverDashboardState extends State<DriverDashboard> {
                       ),
                       _drawerTile(
                         context,
+                        Icons.assignment_outlined,
+                        lang.isSwahili
+                            ? 'Maagizo Yanayopatikana'
+                            : 'Available Orders',
+                        3,
+                      ),
+                      _drawerTile(
+                        context,
+                        Icons.history_outlined,
+                        lang.t('delivery_history'),
+                        4,
+                      ),
+                      _drawerTile(
+                        context,
                         Icons.attach_money_outlined,
                         lang.t('earnings'),
-                        3,
+                        5,
                       ),
                       _drawerTile(
                         context,
                         Icons.person_outline,
                         lang.t('my_profile'),
-                        4,
+                        6,
                       ),
                     ],
                   ),
