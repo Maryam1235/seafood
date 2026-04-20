@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Eye } from 'lucide-react';
+import { Eye, Pencil, Trash2 } from 'lucide-react';
 import styles from './OrdersTable.module.css';
 
 const STATUS_COLORS = {
@@ -18,6 +18,7 @@ export default function OrdersTable() {
   const [statusFilter, setStatus] = useState('all');
   const [sortBy, setSort]         = useState('newest');
   const [viewOrder, setViewOrder] = useState(null);
+  const [editOrder, setEditOrder] = useState(null);
   const [page, setPage]           = useState(1);
   const PAGE_SIZE = 10;
 
@@ -34,6 +35,22 @@ export default function OrdersTable() {
 
   const updateStatus = async (id, status) => {
     await updateDoc(doc(db, 'orders', id), { status });
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this order?')) {
+      await deleteDoc(doc(db, 'orders', id));
+    }
+  };
+
+  const handleEditSave = async (e) => {
+    e.preventDefault();
+    await updateDoc(doc(db, 'orders', editOrder.id), {
+      status: editOrder.status,
+      'delivery.status': editOrder.deliveryStatus || editOrder.delivery?.status,
+      total: parseFloat(editOrder.total) || editOrder.total,
+    });
+    setEditOrder(null);
   };
 
   const formatDate = (createdAt) => {
@@ -80,7 +97,6 @@ export default function OrdersTable() {
         <span className={styles.count}>{filtered.length} orders</span>
       </div>
 
-      {/* Toolbar */}
       <div className={styles.toolbar}>
         <input className={styles.search} placeholder="Search by order ID, customer name, phone..."
           value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
@@ -99,18 +115,12 @@ export default function OrdersTable() {
         </select>
       </div>
 
-      {/* Table */}
       <div className={styles.tableWrap}>
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>Order ID</th>
-              <th>Customer</th>
-              <th>Items</th>
-              <th>Total</th>
-              <th>Date</th>
-              <th>Status</th>
-              <th>Actions</th>
+              <th>Order ID</th><th>Customer</th><th>Items</th>
+              <th>Total</th><th>Date</th><th>Status</th><th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -143,12 +153,8 @@ export default function OrdersTable() {
                   <td className={styles.total}>TShs {o.total?.toLocaleString()}</td>
                   <td className={styles.date}>{formatDate(o.createdAt)}</td>
                   <td>
-                    <select
-                      className={styles.statusSelect}
-                      style={{ background: sc.bg, color: sc.text }}
-                      value={o.status || 'pending'}
-                      onChange={e => updateStatus(o.id, e.target.value)}
-                    >
+                    <select className={styles.statusSelect} style={{ background: sc.bg, color: sc.text }}
+                      value={o.status || 'pending'} onChange={e => updateStatus(o.id, e.target.value)}>
                       <option value="pending">Pending</option>
                       <option value="confirmed">Confirmed</option>
                       <option value="delivered">Delivered</option>
@@ -156,9 +162,17 @@ export default function OrdersTable() {
                     </select>
                   </td>
                   <td>
-                    <button className={styles.viewBtn} onClick={() => setViewOrder({...o, customer})} title="View">
-                      <Eye size={16} />
-                    </button>
+                    <div className={styles.actions}>
+                      <button className={styles.viewBtn} onClick={() => setViewOrder({...o, customer})} title="View">
+                        <Eye size={16} />
+                      </button>
+                      <button className={styles.editBtn} onClick={() => setEditOrder({...o})} title="Edit">
+                        <Pencil size={16} />
+                      </button>
+                      <button className={styles.deleteBtn} onClick={() => handleDelete(o.id)} title="Delete">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               );
@@ -167,7 +181,6 @@ export default function OrdersTable() {
         </table>
       </div>
 
-      {/* Pagination */}
       {totalPages > 0 && (
         <div className={styles.pagination}>
           <button className={styles.pageBtn} onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>← Previous</button>
@@ -185,32 +198,23 @@ export default function OrdersTable() {
               <button className={styles.closeBtn} onClick={() => setViewOrder(null)}>✕</button>
             </div>
             <div className={styles.modalBody}>
-              {/* Customer */}
               <div className={styles.sectionTitle}>Customer</div>
               <div className={styles.infoCard}>
-                <div className={styles.infoRow}>
-                  <span className={styles.infoLabel}>Name</span>
-                  <span className={styles.infoValue}>{viewOrder.customer?.fullName || viewOrder.customer?.username || 'N/A'}</span>
-                </div>
-                <div className={styles.infoRow}>
-                  <span className={styles.infoLabel}>Phone</span>
-                  <span className={styles.infoValue}>{viewOrder.customer?.phone || 'N/A'}</span>
-                </div>
-                <div className={styles.infoRow}>
-                  <span className={styles.infoLabel}>Location</span>
-                  <span className={styles.infoValue}>{viewOrder.customer?.location?.name || 'N/A'}</span>
-                </div>
+                {[['Name', viewOrder.customer?.fullName || viewOrder.customer?.username],
+                  ['Phone', viewOrder.customer?.phone],
+                  ['Location', viewOrder.customer?.location?.name]].map(([l, v]) => (
+                  <div key={l} className={styles.infoRow}>
+                    <span className={styles.infoLabel}>{l}</span>
+                    <span className={styles.infoValue}>{v || 'N/A'}</span>
+                  </div>
+                ))}
               </div>
-
-              {/* Items */}
               <div className={styles.sectionTitle}>Items</div>
               <div className={styles.itemsList}>
                 {(viewOrder.items || []).map((item, i) => (
                   <div key={i} className={styles.orderItem}>
-                    {item.imageUrl
-                      ? <img src={item.imageUrl} alt={item.name} className={styles.itemImg} />
-                      : <div className={styles.itemImgPlaceholder}>📦</div>
-                    }
+                    {item.imageUrl ? <img src={item.imageUrl} alt={item.name} className={styles.itemImg} />
+                      : <div className={styles.itemImgPlaceholder}>📦</div>}
                     <div className={styles.itemInfo}>
                       <div className={styles.itemName}>{item.name}</div>
                       <div className={styles.itemPrice}>TShs {item.price?.toLocaleString()} / {item.unit}</div>
@@ -220,31 +224,66 @@ export default function OrdersTable() {
                   </div>
                 ))}
               </div>
-
-              {/* Summary */}
               <div className={styles.orderSummary}>
-                <div className={styles.summaryRow}>
-                  <span>Total</span>
-                  <strong>TShs {viewOrder.total?.toLocaleString()}</strong>
-                </div>
-                <div className={styles.summaryRow}>
-                  <span>Date</span>
-                  <span>{formatDateTime(viewOrder.createdAt)}</span>
-                </div>
+                <div className={styles.summaryRow}><span>Total</span><strong>TShs {viewOrder.total?.toLocaleString()}</strong></div>
+                <div className={styles.summaryRow}><span>Date</span><span>{formatDateTime(viewOrder.createdAt)}</span></div>
                 <div className={styles.summaryRow}>
                   <span>Status</span>
                   <span className={styles.statusBadge} style={{
                     background: (STATUS_COLORS[viewOrder.status] || STATUS_COLORS.pending).bg,
                     color: (STATUS_COLORS[viewOrder.status] || STATUS_COLORS.pending).text,
-                  }}>
-                    {viewOrder.status?.toUpperCase()}
-                  </span>
+                  }}>{viewOrder.status?.toUpperCase()}</span>
                 </div>
               </div>
             </div>
             <div className={styles.modalFooter}>
               <button className={styles.cancelBtn} onClick={() => setViewOrder(null)}>Close</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editOrder && (
+        <div className={styles.overlay} onClick={() => setEditOrder(null)}>
+          <div className={styles.modal} onClick={e => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3>Edit Order #{editOrder.id?.substring(0, 6).toUpperCase()}</h3>
+              <button className={styles.closeBtn} onClick={() => setEditOrder(null)}>✕</button>
+            </div>
+            <form onSubmit={handleEditSave}>
+              <div style={{padding: '20px 24px'}}>
+                <div className={styles.editField}>
+                  <label>Order Status</label>
+                  <select value={editOrder.status || 'pending'}
+                    onChange={e => setEditOrder({...editOrder, status: e.target.value})}>
+                    <option value="pending">Pending</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="delivered">Delivered</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+                <div className={styles.editField}>
+                  <label>Delivery Status</label>
+                  <select value={editOrder.delivery?.status || 'searching'}
+                    onChange={e => setEditOrder({...editOrder, deliveryStatus: e.target.value})}>
+                    <option value="searching">Searching Driver</option>
+                    <option value="assigned">Driver Assigned</option>
+                    <option value="on_the_way">On the Way</option>
+                    <option value="delivered">Delivered</option>
+                  </select>
+                </div>
+                <div className={styles.editField}>
+                  <label>Total (TShs)</label>
+                  <input type="number" value={editOrder.total || 0}
+                    onChange={e => setEditOrder({...editOrder, total: e.target.value})} />
+                </div>
+              </div>
+              <div className={styles.modalFooter}>
+                <button type="button" className={styles.cancelBtn} onClick={() => setEditOrder(null)}>Cancel</button>
+                <button type="submit" className={styles.submitBtn}>Save Changes</button>
+              </div>
+            </form>
           </div>
         </div>
       )}

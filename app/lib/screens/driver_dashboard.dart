@@ -388,12 +388,16 @@ class _DriverHomePage extends StatelessWidget {
     required this.onOpenDrawer,
   });
 
+  static const _teal = Color(0xFF00695C);
+  static const _navy = Color(0xFF1E1B4B);
+
   @override
   Widget build(BuildContext context) {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
+      backgroundColor: const Color(0xFFF5F6FA),
       appBar: AppBar(
-        backgroundColor: Colors.teal.shade700,
+        backgroundColor: _teal,
         foregroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
@@ -405,12 +409,12 @@ class _DriverHomePage extends StatelessWidget {
           children: [
             Text(
               lang.t('welcome_back'),
-              style: const TextStyle(fontSize: 13, color: Colors.white70),
+              style: const TextStyle(fontSize: 12, color: Colors.white70),
             ),
             Text(
               userData?['username'] ?? '',
               style: const TextStyle(
-                fontSize: 17,
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
               ),
@@ -427,45 +431,66 @@ class _DriverHomePage extends StatelessWidget {
       body: SingleChildScrollView(
         child: Column(
           children: [
+            // Header with online toggle + stats
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
-              decoration: BoxDecoration(
-                color: Colors.teal.shade700,
-                borderRadius: const BorderRadius.only(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 28),
+              decoration: const BoxDecoration(
+                color: _teal,
+                borderRadius: BorderRadius.only(
                   bottomLeft: Radius.circular(32),
                   bottomRight: Radius.circular(32),
                 ),
               ),
               child: Column(
                 children: [
+                  // Online toggle
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 14,
+                      horizontal: 18,
+                      vertical: 12,
                     ),
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Row(
                           children: [
-                            Icon(
-                              Icons.circle,
-                              color: isOnline
-                                  ? Colors.greenAccent
-                                  : Colors.white54,
-                              size: 14,
+                            Container(
+                              width: 10,
+                              height: 10,
+                              decoration: BoxDecoration(
+                                color: isOnline
+                                    ? Colors.greenAccent
+                                    : Colors.white38,
+                                shape: BoxShape.circle,
+                                boxShadow: isOnline
+                                    ? [
+                                        BoxShadow(
+                                          color: Colors.greenAccent.withOpacity(
+                                            0.5,
+                                          ),
+                                          blurRadius: 6,
+                                        ),
+                                      ]
+                                    : [],
+                              ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 10),
                             Text(
-                              isOnline ? lang.t('online') : lang.t('offline'),
+                              isOnline
+                                  ? (lang.isSwahili
+                                        ? 'Uko Mtandaoni'
+                                        : 'You are Online')
+                                  : (lang.isSwahili
+                                        ? 'Uko Nje'
+                                        : 'You are Offline'),
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 16,
+                                fontSize: 15,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -475,79 +500,352 @@ class _DriverHomePage extends StatelessWidget {
                           value: isOnline,
                           onChanged: onToggle,
                           activeColor: Colors.greenAccent,
+                          activeTrackColor: Colors.greenAccent.withOpacity(0.3),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _StatCard(
-                        label: lang.t('active_delivery'),
-                        value: '0',
-                        icon: Icons.local_shipping,
-                      ),
-                      _StatCard(
-                        label: lang.t('delivery_history'),
-                        value: '0',
-                        icon: Icons.history,
-                      ),
-                      _StatCard(
-                        label: lang.t('earnings'),
-                        value: '0',
-                        icon: Icons.attach_money,
-                      ),
-                    ],
+                  // Stats row
+                  StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('orders')
+                        .where('delivery.driverId', isEqualTo: uid)
+                        .snapshots(),
+                    builder: (context, snap) {
+                      final orders = snap.data?.docs ?? [];
+                      final active = orders
+                          .where(
+                            (d) =>
+                                (d.data() as Map)['delivery']?['status'] ==
+                                'on_the_way',
+                          )
+                          .length;
+                      final delivered = orders
+                          .where(
+                            (d) => (d.data() as Map)['status'] == 'delivered',
+                          )
+                          .length;
+                      final earnings = orders
+                          .where(
+                            (d) => (d.data() as Map)['status'] == 'delivered',
+                          )
+                          .fold<double>(
+                            0,
+                            (sum, d) =>
+                                sum +
+                                (((d.data() as Map)['delivery']?['cost'] ?? 0)
+                                        as num)
+                                    .toDouble(),
+                          );
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _StatCard(
+                            label: lang.t('active_delivery'),
+                            value: '$active',
+                            icon: Icons.local_shipping,
+                          ),
+                          _StatCard(
+                            label: lang.t('delivery_history'),
+                            value: '$delivered',
+                            icon: Icons.history,
+                          ),
+                          _StatCard(
+                            label: lang.t('earnings'),
+                            value: 'TShs ${earnings.toStringAsFixed(0)}',
+                            icon: Icons.attach_money,
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
+
+            // Recent Available Orders
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    lang.t('available_orders'),
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade800,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
-                    childAspectRatio: 1.3,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _QuickCard(
-                        icon: Icons.assignment,
-                        label: lang.t('available_orders'),
-                        color: Colors.teal,
+                      Text(
+                        lang.isSwahili
+                            ? 'Maagizo Yanayopatikana'
+                            : 'Available Orders',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF111827),
+                        ),
                       ),
-                      _QuickCard(
-                        icon: Icons.local_shipping,
-                        label: lang.t('active_delivery'),
-                        color: Colors.blue,
-                      ),
-                      _QuickCard(
-                        icon: Icons.history,
-                        label: lang.t('delivery_history'),
-                        color: Colors.purple,
-                      ),
-                      _QuickCard(
-                        icon: Icons.attach_money,
-                        label: lang.t('earnings'),
-                        color: Colors.green,
+                      TextButton(
+                        onPressed: () {},
+                        child: Text(
+                          lang.isSwahili ? 'Tazama Yote' : 'See All',
+                          style: const TextStyle(
+                            color: _teal,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ],
                   ),
+                  const SizedBox(height: 8),
+                  StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('orders')
+                        .where('status', isEqualTo: 'pending')
+                        .snapshots(),
+                    builder: (context, snap) {
+                      if (!snap.hasData || snap.data!.docs.isEmpty) {
+                        return Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Center(
+                            child: Text(
+                              lang.isSwahili
+                                  ? 'Hakuna maagizo sasa'
+                                  : 'No available orders',
+                              style: TextStyle(color: Colors.grey.shade500),
+                            ),
+                          ),
+                        );
+                      }
+                      final orders = snap.data!.docs.take(3).toList();
+                      return Column(
+                        children: orders.map((doc) {
+                          final order = doc.data() as Map<String, dynamic>;
+                          final items = (order['items'] as List?) ?? [];
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.shade200,
+                                  blurRadius: 6,
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    color: _teal.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: const Icon(
+                                    Icons.shopping_bag_outlined,
+                                    color: _teal,
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${lang.isSwahili ? 'Agizo' : 'Order'} #${doc.id.substring(0, 6).toUpperCase()}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      Text(
+                                        '${items.length} ${lang.isSwahili ? 'bidhaa' : 'items'}',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey.shade500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      'TShs ${order['total']?.toStringAsFixed(0) ?? '0'}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: _navy,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    Container(
+                                      margin: const EdgeInsets.only(top: 4),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.orange.shade50,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        lang.isSwahili
+                                            ? 'Inasubiri'
+                                            : 'Pending',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.orange.shade700,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Recent Deliveries
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        lang.isSwahili
+                            ? 'Utoaji wa Hivi Karibuni'
+                            : 'Recent Deliveries',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF111827),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () {},
+                        child: Text(
+                          lang.isSwahili ? 'Tazama Yote' : 'See All',
+                          style: const TextStyle(
+                            color: _teal,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('orders')
+                        .where('delivery.driverId', isEqualTo: uid)
+                        .where('status', isEqualTo: 'delivered')
+                        .snapshots(),
+                    builder: (context, snap) {
+                      if (!snap.hasData || snap.data!.docs.isEmpty) {
+                        return Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Center(
+                            child: Text(
+                              lang.isSwahili
+                                  ? 'Hakuna historia bado'
+                                  : 'No deliveries yet',
+                              style: TextStyle(color: Colors.grey.shade500),
+                            ),
+                          ),
+                        );
+                      }
+                      final orders = snap.data!.docs.take(3).toList();
+                      return Column(
+                        children: orders.map((doc) {
+                          final order = doc.data() as Map<String, dynamic>;
+                          final delivery =
+                              order['delivery'] as Map<String, dynamic>?;
+                          final deliveredAt =
+                              delivery?['deliveredAt'] as Timestamp?;
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.grey.shade200,
+                                  blurRadius: 6,
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 48,
+                                  height: 48,
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.shade50,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Icon(
+                                    Icons.check_circle_outline,
+                                    color: Colors.green.shade600,
+                                    size: 24,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${lang.isSwahili ? 'Agizo' : 'Order'} #${doc.id.substring(0, 6).toUpperCase()}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      if (deliveredAt != null)
+                                        Text(
+                                          '${deliveredAt.toDate().day}/${deliveredAt.toDate().month}/${deliveredAt.toDate().year}',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey.shade500,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                                Text(
+                                  'TShs ${delivery?['cost']?.toStringAsFixed(0) ?? '0'}',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green.shade700,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
