@@ -6,7 +6,8 @@ import '../providers/language_provider.dart';
 import '../services/notification_service.dart';
 
 class DriverNotificationsScreen extends StatefulWidget {
-  const DriverNotificationsScreen({super.key});
+  final VoidCallback? onOpenDrawer;
+  const DriverNotificationsScreen({super.key, this.onOpenDrawer});
 
   @override
   State<DriverNotificationsScreen> createState() =>
@@ -28,6 +29,11 @@ class _DriverNotificationsScreenState extends State<DriverNotificationsScreen> {
         backgroundColor: Colors.teal.shade700,
         foregroundColor: Colors.white,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.menu),
+          onPressed:
+              widget.onOpenDrawer ?? () => Scaffold.of(context).openDrawer(),
+        ),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
