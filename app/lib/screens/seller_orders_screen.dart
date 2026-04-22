@@ -5,7 +5,8 @@ import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
 
 class SellerOrdersScreen extends StatelessWidget {
-  const SellerOrdersScreen({super.key});
+  final VoidCallback? onOpenDrawer;
+  const SellerOrdersScreen({super.key, this.onOpenDrawer});
 
   static const _navy = Color(0xFF1E1B4B);
 
@@ -42,6 +43,10 @@ class SellerOrdersScreen extends StatelessWidget {
         backgroundColor: _navy,
         foregroundColor: Colors.white,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.menu),
+          onPressed: onOpenDrawer ?? () => Scaffold.of(context).openDrawer(),
+        ),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance.collection('orders').snapshots(),

@@ -94,8 +94,9 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
 
   // Calculate cost based on distance
   double _calcCost(String vehicleType, Map<String, dynamic>? driverLoc) {
-    if (_customerLocation == null || driverLoc == null)
+    if (_customerLocation == null || driverLoc == null) {
       return _minCost(vehicleType);
+    }
     final cLat = (_customerLocation!['latitude'] as num).toDouble();
     final cLon = (_customerLocation!['longitude'] as num).toDouble();
     final dLat = (driverLoc['latitude'] as num?)?.toDouble();
@@ -182,10 +183,11 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
         );
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

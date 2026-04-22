@@ -9,10 +9,12 @@ import 'edit_profile_screen.dart';
 class ProfileScreen extends StatefulWidget {
   final Color themeColor;
   final IconData roleIcon;
+  final VoidCallback? onOpenDrawer;
   const ProfileScreen({
     super.key,
     required this.themeColor,
     required this.roleIcon,
+    this.onOpenDrawer,
   });
 
   @override
@@ -75,6 +77,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         backgroundColor: widget.themeColor,
         foregroundColor: Colors.white,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.menu),
+          onPressed:
+              widget.onOpenDrawer ?? () => Scaffold.of(context).openDrawer(),
+        ),
       ),
       body: SingleChildScrollView(
         child: Column(

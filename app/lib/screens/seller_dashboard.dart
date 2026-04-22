@@ -19,6 +19,7 @@ class _SellerDashboardState extends State<SellerDashboard> {
   int _currentIndex = 0;
   final _authService = AuthService();
   Map<String, dynamic>? _userData;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
@@ -45,18 +46,30 @@ class _SellerDashboardState extends State<SellerDashboard> {
     }
   }
 
+  void _openDrawer() => _scaffoldKey.currentState?.openDrawer();
+
   @override
   Widget build(BuildContext context) {
     final lang = context.watch<LanguageProvider>();
     final pages = [
-      _SellerHomePage(userData: _userData, lang: lang, onLogout: _logout),
-      SellerProductsPage(lang: lang),
-      const SellerOrdersScreen(),
-      ProfileScreen(themeColor: const Color(0xFF1E1B4B), roleIcon: Icons.store),
+      _SellerHomePage(
+        userData: _userData,
+        lang: lang,
+        onLogout: _logout,
+        onOpenDrawer: _openDrawer,
+      ),
+      SellerProductsPage(lang: lang, onOpenDrawer: _openDrawer),
+      SellerOrdersScreen(onOpenDrawer: _openDrawer),
+      ProfileScreen(
+        themeColor: const Color(0xFF1E1B4B),
+        roleIcon: Icons.store,
+        onOpenDrawer: _openDrawer,
+      ),
     ];
 
     return Scaffold(
-      body: pages[_currentIndex],
+      key: _scaffoldKey,
+      body: IndexedStack(index: _currentIndex, children: pages),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (i) => setState(() => _currentIndex = i),
@@ -65,23 +78,171 @@ class _SellerDashboardState extends State<SellerDashboard> {
         unselectedItemColor: Colors.grey,
         items: [
           BottomNavigationBarItem(
-            icon: const Icon(Icons.dashboard),
+            icon: const Icon(Icons.dashboard_outlined),
+            activeIcon: const Icon(Icons.dashboard),
             label: lang.t('dashboard'),
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.inventory),
+            icon: const Icon(Icons.inventory_2_outlined),
+            activeIcon: const Icon(Icons.inventory_2),
             label: lang.t('my_products'),
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.shopping_bag),
+            icon: const Icon(Icons.shopping_bag_outlined),
+            activeIcon: const Icon(Icons.shopping_bag),
             label: lang.t('orders'),
           ),
           BottomNavigationBarItem(
-            icon: const Icon(Icons.person),
+            icon: const Icon(Icons.person_outline),
+            activeIcon: const Icon(Icons.person),
             label: lang.t('my_profile'),
           ),
         ],
       ),
+      drawer: _buildDrawer(context, lang),
+    );
+  }
+
+  Widget _buildDrawer(BuildContext context, LanguageProvider lang) {
+    final name = _userData?['fullName'] ?? _userData?['username'] ?? '';
+    final phone = _userData?['phone'] ?? '';
+    final initial = name.isNotEmpty ? name[0].toUpperCase() : 'S';
+
+    return Drawer(
+      child: Container(
+        color: const Color(0xFF1E1B4B),
+        child: SafeArea(
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 30,
+                      backgroundColor: Colors.white24,
+                      child: Text(
+                        initial,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            name,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          if (phone.isNotEmpty)
+                            Text(
+                              phone,
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                              ),
+                            ),
+                          Text(
+                            lang.t('seller_account'),
+                            style: const TextStyle(
+                              color: Colors.white54,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(color: Colors.white24),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  children: [
+                    _drawerTile(
+                      context,
+                      Icons.dashboard_outlined,
+                      lang.t('dashboard'),
+                      0,
+                    ),
+                    _drawerTile(
+                      context,
+                      Icons.inventory_2_outlined,
+                      lang.t('my_products'),
+                      1,
+                    ),
+                    _drawerTile(
+                      context,
+                      Icons.shopping_bag_outlined,
+                      lang.t('orders'),
+                      2,
+                    ),
+                    _drawerTile(
+                      context,
+                      Icons.person_outline,
+                      lang.t('my_profile'),
+                      3,
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(color: Colors.white24),
+              ListTile(
+                leading: const Icon(Icons.logout, color: Colors.redAccent),
+                title: Text(
+                  lang.t('logout'),
+                  style: const TextStyle(
+                    color: Colors.redAccent,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _logout();
+                },
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _drawerTile(
+    BuildContext context,
+    IconData icon,
+    String label,
+    int index,
+  ) {
+    final isSelected = _currentIndex == index;
+    return ListTile(
+      leading: Icon(icon, color: isSelected ? Colors.white : Colors.white70),
+      title: Text(
+        label,
+        style: TextStyle(
+          color: isSelected ? Colors.white : Colors.white70,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+      tileColor: isSelected
+          ? Colors.white.withValues(alpha: 0.12)
+          : Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      onTap: () {
+        setState(() => _currentIndex = index);
+        Navigator.pop(context);
+      },
     );
   }
 }
@@ -90,10 +251,12 @@ class _SellerHomePage extends StatelessWidget {
   final Map<String, dynamic>? userData;
   final LanguageProvider lang;
   final VoidCallback onLogout;
+  final VoidCallback? onOpenDrawer;
   const _SellerHomePage({
     this.userData,
     required this.lang,
     required this.onLogout,
+    this.onOpenDrawer,
   });
 
   @override
@@ -104,6 +267,10 @@ class _SellerHomePage extends StatelessWidget {
         backgroundColor: const Color(0xFF1E1B4B),
         foregroundColor: Colors.white,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.menu, color: Colors.white),
+          onPressed: onOpenDrawer ?? () => Scaffold.of(context).openDrawer(),
+        ),
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

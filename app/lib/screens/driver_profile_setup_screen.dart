@@ -577,8 +577,9 @@ class _DriverProfileSetupScreenState extends State<DriverProfileSetupScreen> {
       ),
       validator: (v) {
         if (v?.isEmpty ?? true) return 'Required';
-        if (isTanzaniaPhone && v!.length != 9)
+        if (isTanzaniaPhone && v!.length != 9) {
           return 'Must be 9 digits after +255';
+        }
         return null;
       },
     );

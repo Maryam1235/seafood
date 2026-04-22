@@ -9,7 +9,8 @@ import 'login_screen.dart';
 import 'cart_screen.dart';
 
 class BrowseSeafoodScreen extends StatefulWidget {
-  const BrowseSeafoodScreen({super.key});
+  final VoidCallback? onOpenDrawer;
+  const BrowseSeafoodScreen({super.key, this.onOpenDrawer});
 
   @override
   State<BrowseSeafoodScreen> createState() => _BrowseSeafoodScreenState();
@@ -72,6 +73,12 @@ class _BrowseSeafoodScreenState extends State<BrowseSeafoodScreen> {
             backgroundColor: _navy,
             foregroundColor: Colors.white,
             automaticallyImplyLeading: false,
+            leading: IconButton(
+              icon: const Icon(Icons.menu, color: Colors.white),
+              onPressed:
+                  widget.onOpenDrawer ??
+                  () => Scaffold.of(context).openDrawer(),
+            ),
             actions: [
               // Cart icon with badge
               StreamBuilder<QuerySnapshot>(
@@ -133,7 +140,7 @@ class _BrowseSeafoodScreenState extends State<BrowseSeafoodScreen> {
                 ),
                 child: SafeArea(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+                    padding: const EdgeInsets.fromLTRB(72, 12, 20, 16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [

@@ -4,55 +4,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
 
-class OrdersScreen extends StatelessWidget {
+class OrderHistoryScreen extends StatelessWidget {
   final VoidCallback? onOpenDrawer;
-  const OrdersScreen({super.key, this.onOpenDrawer});
+  const OrderHistoryScreen({super.key, this.onOpenDrawer});
 
   static const _navy = Color(0xFF3730A3);
-
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'pending':
-        return Colors.orange;
-      case 'confirmed':
-        return Colors.blue;
-      case 'delivered':
-        return Colors.green;
-      case 'cancelled':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  String _statusLabel(String status, bool isSwahili) {
-    if (isSwahili) {
-      switch (status) {
-        case 'pending':
-          return 'Inasubiri';
-        case 'confirmed':
-          return 'Imethibitishwa';
-        case 'delivered':
-          return 'Imewasilishwa';
-        case 'cancelled':
-          return 'Imeghairiwa';
-        default:
-          return status;
-      }
-    }
-    switch (status) {
-      case 'pending':
-        return 'Pending';
-      case 'confirmed':
-        return 'Confirmed';
-      case 'delivered':
-        return 'Delivered';
-      case 'cancelled':
-        return 'Cancelled';
-      default:
-        return status;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -62,7 +18,7 @@ class OrdersScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
       appBar: AppBar(
-        title: Text(lang.t('my_orders')),
+        title: Text(lang.t('order_history')),
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
@@ -84,6 +40,7 @@ class OrdersScreen extends StatelessWidget {
         stream: FirebaseFirestore.instance
             .collection('orders')
             .where('customerId', isEqualTo: uid)
+            .where('status', isEqualTo: 'delivered')
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -96,14 +53,24 @@ class OrdersScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    Icons.receipt_long_outlined,
+                    Icons.history_outlined,
                     size: 90,
                     color: Colors.grey.shade300,
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    lang.isSwahili ? 'Hakuna maagizo bado' : 'No orders yet',
+                    lang.isSwahili
+                        ? 'Hakuna historia ya maagizo'
+                        : 'No order history yet',
                     style: TextStyle(fontSize: 18, color: Colors.grey.shade500),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    lang.isSwahili
+                        ? 'Maagizo yaliyowasilishwa yataonekana hapa'
+                        : 'Delivered orders will appear here',
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade400),
+                    textAlign: TextAlign.center,
                   ),
                 ],
               ),
@@ -116,11 +83,14 @@ class OrdersScreen extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             itemCount: orders.length,
             itemBuilder: (context, index) {
-              final order = orders[index].data() as Map<String, dynamic>;
+              final doc = orders[index];
+              final order = doc.data() as Map<String, dynamic>;
               final items = (order['items'] as List?) ?? [];
               final total = order['total'] ?? 0;
-              final status = order['status'] ?? 'pending';
+              final grandTotal = order['grandTotal'] ?? total;
               final createdAt = order['createdAt'] as Timestamp?;
+              final delivery = order['delivery'] as Map<String, dynamic>?;
+              final deliveredAt = delivery?['deliveredAt'] as Timestamp?;
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 14),
@@ -128,19 +98,23 @@ class OrdersScreen extends StatelessWidget {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
-                    BoxShadow(color: Colors.grey.shade200, blurRadius: 6),
+                    BoxShadow(
+                      color: Colors.grey.shade200,
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
                   ],
                 ),
                 child: Column(
                   children: [
-                    // Order header
+                    // Header with delivered badge
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 12,
                       ),
                       decoration: BoxDecoration(
-                        color: _navy.withOpacity(0.04),
+                        color: Colors.green.shade50,
                         borderRadius: const BorderRadius.vertical(
                           top: Radius.circular(16),
                         ),
@@ -153,8 +127,8 @@ class OrdersScreen extends StatelessWidget {
                             children: [
                               Text(
                                 lang.isSwahili
-                                    ? 'Agizo #${orders[index].id.substring(0, 6).toUpperCase()}'
-                                    : 'Order #${orders[index].id.substring(0, 6).toUpperCase()}',
+                                    ? 'Agizo #${doc.id.substring(0, 6).toUpperCase()}'
+                                    : 'Order #${doc.id.substring(0, 6).toUpperCase()}',
                                 style: const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 14,
@@ -162,7 +136,10 @@ class OrdersScreen extends StatelessWidget {
                               ),
                               if (createdAt != null)
                                 Text(
-                                  '${createdAt.toDate().day}/${createdAt.toDate().month}/${createdAt.toDate().year}',
+                                  lang.isSwahili
+                                      ? 'Iliagizwa: '
+                                      : 'Placed: '
+                                            '${createdAt.toDate().day}/${createdAt.toDate().month}/${createdAt.toDate().year}',
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: Colors.grey.shade500,
@@ -170,28 +147,29 @@ class OrdersScreen extends StatelessWidget {
                                 ),
                             ],
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _statusColor(status).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              _statusLabel(status, lang.isSwahili),
-                              style: TextStyle(
-                                color: _statusColor(status),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.check_circle,
+                                color: Colors.green.shade600,
+                                size: 16,
                               ),
-                            ),
+                              const SizedBox(width: 4),
+                              Text(
+                                lang.isSwahili ? 'Imewasilishwa' : 'Delivered',
+                                style: TextStyle(
+                                  color: Colors.green.shade700,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
-                    // Items
+
+                    // Items list
                     ...items
                         .take(2)
                         .map(
@@ -210,6 +188,17 @@ class OrdersScreen extends StatelessWidget {
                                           width: 48,
                                           height: 48,
                                           fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) =>
+                                              Container(
+                                                width: 48,
+                                                height: 48,
+                                                color: Colors.grey.shade100,
+                                                child: Icon(
+                                                  Icons.set_meal,
+                                                  color: Colors.grey.shade300,
+                                                  size: 24,
+                                                ),
+                                              ),
                                         )
                                       : Container(
                                           width: 48,
@@ -246,15 +235,19 @@ class OrdersScreen extends StatelessWidget {
                     if (items.length > 2)
                       Padding(
                         padding: const EdgeInsets.only(left: 16, bottom: 4),
-                        child: Text(
-                          '+${items.length - 2} ${lang.isSwahili ? 'bidhaa zaidi' : 'more items'}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey.shade500,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            '+${items.length - 2} ${lang.isSwahili ? 'bidhaa zaidi' : 'more items'}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade500,
+                            ),
                           ),
                         ),
                       ),
-                    // Total
+
+                    // Footer: delivery date + total
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -265,23 +258,49 @@ class OrdersScreen extends StatelessWidget {
                           top: BorderSide(color: Colors.grey.shade100),
                         ),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      child: Column(
                         children: [
-                          Text(
-                            lang.isSwahili ? 'Jumla' : 'Total',
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontSize: 14,
+                          if (deliveredAt != null)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.local_shipping_outlined,
+                                    size: 14,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '${lang.isSwahili ? 'Iliwasilishwa' : 'Delivered on'}: '
+                                    '${deliveredAt.toDate().day}/${deliveredAt.toDate().month}/${deliveredAt.toDate().year}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade500,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          Text(
-                            'TShs ${total.toStringAsFixed(0)}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                              color: _navy,
-                            ),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                lang.isSwahili ? 'Jumla' : 'Total',
+                                style: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              Text(
+                                'TShs ${grandTotal.toStringAsFixed(0)}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                  color: _navy,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),

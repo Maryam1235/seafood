@@ -14,7 +14,8 @@ int _getTime(Map p) {
 
 class SellerProductsPage extends StatefulWidget {
   final LanguageProvider lang;
-  const SellerProductsPage({super.key, required this.lang});
+  final VoidCallback? onOpenDrawer;
+  const SellerProductsPage({super.key, required this.lang, this.onOpenDrawer});
 
   @override
   State<SellerProductsPage> createState() => _SellerProductsPageState();
@@ -66,6 +67,11 @@ class _SellerProductsPageState extends State<SellerProductsPage> {
         title: Text(widget.lang.t('my_products')),
         backgroundColor: const Color(0xFF1E1B4B),
         foregroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.menu),
+          onPressed:
+              widget.onOpenDrawer ?? () => Scaffold.of(context).openDrawer(),
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.push(

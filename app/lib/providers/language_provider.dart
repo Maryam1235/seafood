@@ -145,6 +145,10 @@ class LanguageProvider extends ChangeNotifier {
       'unit_g': 'g',
       'unit_piece': 'piece',
       'unit_dozen': 'dozen',
+
+      // Customer sidebar extras
+      'order_history': 'Order History',
+      'delivery_personnel': 'Delivery Personnel',
     },
     'sw': {
       // Login
@@ -265,7 +269,10 @@ class LanguageProvider extends ChangeNotifier {
       'unit_g': 'g',
       'unit_piece': 'kipande',
       'unit_dozen': 'dazeni',
+
+      // Customer sidebar extras
+      'order_history': 'Historia ya Maagizo',
+      'delivery_personnel': 'Madereva wa Utoaji',
     },
   };
 }
-

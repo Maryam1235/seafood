@@ -187,10 +187,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   validator: (v) {
                     if (v?.isEmpty ?? true) return 'Required';
-                    if (RegExp(r'\d').hasMatch(v!))
+                    if (RegExp(r'\d').hasMatch(v!)) {
                       return lang.isSwahili
                           ? 'Jina haliwezi kuwa na nambari'
                           : 'Name cannot contain numbers';
+                    }
                     return null;
                   },
                 ),

@@ -376,8 +376,9 @@ class _OrderDetailsSheet extends StatelessWidget {
               .doc(orderId)
               .get(),
           builder: (context, snap) {
-            if (!snap.hasData)
+            if (!snap.hasData) {
               return const Center(child: CircularProgressIndicator());
+            }
             final order = snap.data!.data() as Map<String, dynamic>?;
             if (order == null) return const SizedBox();
             final items = (order['items'] as List?) ?? [];
@@ -501,8 +502,9 @@ class _ActiveDeliverySheet extends StatelessWidget {
               .doc(orderId)
               .get(),
           builder: (context, snap) {
-            if (!snap.hasData)
+            if (!snap.hasData) {
               return const Center(child: CircularProgressIndicator());
+            }
             final order = snap.data!.data() as Map<String, dynamic>?;
             if (order == null) return const SizedBox();
             final items = (order['items'] as List?) ?? [];

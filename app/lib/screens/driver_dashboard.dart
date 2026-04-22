@@ -71,6 +71,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
       ProfileScreen(
         themeColor: Colors.teal.shade700,
         roleIcon: Icons.delivery_dining,
+        onOpenDrawer: _openDrawer,
       ), // 6
     ];
 
@@ -499,7 +500,7 @@ class _DriverHomePage extends StatelessWidget {
                         Switch(
                           value: isOnline,
                           onChanged: onToggle,
-                          activeColor: Colors.greenAccent,
+                          activeThumbColor: Colors.greenAccent,
                           activeTrackColor: Colors.greenAccent.withOpacity(0.3),
                         ),
                       ],

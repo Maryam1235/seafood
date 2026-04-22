@@ -116,8 +116,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 decoration: _dec(lang.t('full_name'), Icons.person_outline),
                 validator: (v) {
                   if (v?.isEmpty ?? true) return 'Required';
-                  if (RegExp(r'\d').hasMatch(v!))
+                  if (RegExp(r'\d').hasMatch(v!)) {
                     return 'Name cannot contain numbers';
+                  }
                   return null;
                 },
               ),
