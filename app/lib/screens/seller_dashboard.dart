@@ -8,6 +8,7 @@ import 'login_screen.dart';
 import 'seller_products_page.dart';
 import 'profile_screen.dart';
 import 'seller_orders_screen.dart';
+import 'add_product_screen.dart';
 
 class SellerDashboard extends StatefulWidget {
   const SellerDashboard({super.key});
@@ -57,6 +58,7 @@ class _SellerDashboardState extends State<SellerDashboard> {
         lang: lang,
         onLogout: _logout,
         onOpenDrawer: _openDrawer,
+        onNavigate: (i) => setState(() => _currentIndex = i),
       ),
       SellerProductsPage(lang: lang, onOpenDrawer: _openDrawer),
       SellerOrdersScreen(onOpenDrawer: _openDrawer),
@@ -252,253 +254,380 @@ class _SellerHomePage extends StatelessWidget {
   final LanguageProvider lang;
   final VoidCallback onLogout;
   final VoidCallback? onOpenDrawer;
+  final ValueChanged<int>? onNavigate;
   const _SellerHomePage({
     this.userData,
     required this.lang,
     required this.onLogout,
     this.onOpenDrawer,
+    this.onNavigate,
   });
+
+  static const _navy = Color(0xFF1E1B4B);
+  static const _indigo = Color(0xFF3730A3);
+
+  String _greeting(LanguageProvider lang) {
+    final h = DateTime.now().hour;
+    if (h < 12) return lang.isSwahili ? 'Habari za asubuhi' : 'Good morning';
+    if (h < 17) return lang.isSwahili ? 'Habari za mchana' : 'Good afternoon';
+    return lang.isSwahili ? 'Habari za jioni' : 'Good evening';
+  }
+
+  String _compact(double v) {
+    if (v >= 1000000) return '${(v / 1000000).toStringAsFixed(1)}M';
+    if (v >= 1000) return '${(v / 1000).toStringAsFixed(1)}K';
+    return v.toStringAsFixed(0);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final now = DateTime.now();
+
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF1E1B4B),
+      backgroundColor: const Color(0xFFF5F6FA),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AddProductScreen()),
+        ),
+        backgroundColor: _indigo,
         foregroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.menu, color: Colors.white),
-          onPressed: onOpenDrawer ?? () => Scaffold.of(context).openDrawer(),
-        ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              lang.t('welcome_back'),
-              style: const TextStyle(fontSize: 14, color: Colors.white70),
-            ),
-            Text(
-              userData?['username'] ?? '',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: onLogout,
-          ),
-        ],
+        icon: const Icon(Icons.add),
+        label: Text(lang.t('add_product')),
+        elevation: 4,
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('products')
-                  .where(
-                    'sellerId',
-                    isEqualTo: FirebaseAuth.instance.currentUser?.uid,
-                  )
-                  .snapshots(),
-              builder: (context, productSnap) {
-                return StreamBuilder<QuerySnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('orders')
-                      .snapshots(),
-                  builder: (context, orderSnap) {
-                    final uid = FirebaseAuth.instance.currentUser?.uid;
-                    final productCount = productSnap.data?.docs.length ?? 0;
-                    int orderCount = 0;
-                    double earnings = 0;
-                    if (orderSnap.hasData) {
-                      for (final doc in orderSnap.data!.docs) {
-                        final data = doc.data() as Map<String, dynamic>;
-                        final items = (data['items'] as List?) ?? [];
-                        final myItems = items
-                            .where((i) => i['sellerId'] == uid)
-                            .toList();
-                        if (myItems.isNotEmpty) {
-                          orderCount++;
-                          if (data['status'] == 'delivered') {
-                            earnings += myItems.fold<double>(
-                              0,
-                              (sum, i) =>
-                                  sum +
-                                  ((i['price'] ?? 0) * (i['quantity'] ?? 1)),
-                            );
-                          }
-                        }
-                      }
-                    }
-                    return Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFF1E1B4B),
-                        borderRadius: BorderRadius.only(
-                          bottomLeft: Radius.circular(32),
-                          bottomRight: Radius.circular(32),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _StatCard(
-                            label: lang.t('my_products'),
-                            value: '$productCount',
-                            icon: Icons.inventory,
-                          ),
-                          _StatCard(
-                            label: lang.t('orders'),
-                            value: '$orderCount',
-                            icon: Icons.shopping_bag,
-                          ),
-                          _StatCard(
-                            label: lang.t('earnings'),
-                            value: 'TShs ${earnings.toStringAsFixed(0)}',
-                            icon: Icons.attach_money,
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                );
-              },
+      body: CustomScrollView(
+        slivers: [
+          // ── Header ──────────────────────────────────────────────
+          SliverAppBar(
+            expandedHeight: 155,
+            pinned: true,
+            floating: false,
+            backgroundColor: _navy,
+            foregroundColor: Colors.white,
+            automaticallyImplyLeading: false,
+            leading: IconButton(
+              icon: const Icon(Icons.menu, color: Colors.white),
+              onPressed:
+                  onOpenDrawer ?? () => Scaffold.of(context).openDrawer(),
             ),
-            const SizedBox(height: 24),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    lang.t('seller_account'),
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade800,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.logout, color: Colors.white),
+                tooltip: lang.t('logout'),
+                onPressed: onLogout,
+              ),
+            ],
+            flexibleSpace: FlexibleSpaceBar(
+              background: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [_navy, _indigo],
+                  ),
+                ),
+                child: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(72, 10, 20, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          '${_greeting(lang)} 👋',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        StreamBuilder<DocumentSnapshot>(
+                          stream: FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(uid)
+                              .snapshots(),
+                          builder: (context, snap) {
+                            final d =
+                                snap.data?.data() as Map<String, dynamic>?;
+                            final name = d?['fullName'] ?? d?['username'] ?? '';
+                            return Text(
+                              name,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${now.day}/${now.month}/${now.year}',
+                          style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
-                    childAspectRatio: 1.3,
+                ),
+              ),
+            ),
+          ),
+          // ── Stats + alert + quick actions + recent orders ──────
+          SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Stats
+                StreamBuilder<QuerySnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('products')
+                      .where('sellerId', isEqualTo: uid)
+                      .snapshots(),
+                  builder: (context, productSnap) {
+                    return StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('orders')
+                          .snapshots(),
+                      builder: (context, orderSnap) {
+                        final productCount = productSnap.data?.docs.length ?? 0;
+                        int totalOrders = 0;
+                        int pendingOrders = 0;
+                        double revenue = 0;
+                        if (orderSnap.hasData) {
+                          for (final doc in orderSnap.data!.docs) {
+                            final data = doc.data() as Map<String, dynamic>;
+                            final items = (data['items'] as List?) ?? [];
+                            final mine = items
+                                .where((i) => i['sellerId'] == uid)
+                                .toList();
+                            if (mine.isNotEmpty) {
+                              totalOrders++;
+                              if (data['status'] == 'pending') pendingOrders++;
+                              if (data['status'] == 'delivered') {
+                                revenue += mine.fold<double>(
+                                  0,
+                                  (acc, i) =>
+                                      acc +
+                                      ((i['price'] ?? 0) *
+                                          (i['quantity'] ?? 1)),
+                                );
+                              }
+                            }
+                          }
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
+                          child: Column(
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _StatTile(
+                                      icon: Icons.inventory_2_outlined,
+                                      label: lang.t('my_products'),
+                                      value: '$productCount',
+                                      color: _indigo,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _StatTile(
+                                      icon: Icons.shopping_bag_outlined,
+                                      label: lang.t('orders'),
+                                      value: '$totalOrders',
+                                      color: Colors.teal,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _StatTile(
+                                      icon: Icons.pending_actions_outlined,
+                                      label: lang.isSwahili
+                                          ? 'Zinasubiri'
+                                          : 'Pending',
+                                      value: '$pendingOrders',
+                                      color: Colors.orange,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _StatTile(
+                                      icon: Icons.attach_money_outlined,
+                                      label: lang.t('earnings'),
+                                      value: 'TShs ${_compact(revenue)}',
+                                      color: Colors.green,
+                                      smallValue: true,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              // Pending alert
+                              if (pendingOrders > 0) ...[
+                                const SizedBox(height: 14),
+                                GestureDetector(
+                                  onTap: () => onNavigate?.call(2),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 11,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.shade50,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: Colors.orange.shade200,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.notifications_active,
+                                          color: Colors.orange.shade700,
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Text(
+                                            lang.isSwahili
+                                                ? 'Una maagizo $pendingOrders yanayosubiri uthibitisho'
+                                                : 'You have $pendingOrders order${pendingOrders > 1 ? 's' : ''} awaiting confirmation',
+                                            style: TextStyle(
+                                              color: Colors.orange.shade800,
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 13,
+                                            ),
+                                          ),
+                                        ),
+                                        Icon(
+                                          Icons.chevron_right,
+                                          color: Colors.orange.shade600,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+
+                // Recent Orders header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 28, 16, 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _QuickCard(
-                        icon: Icons.add_business,
-                        label: lang.t('add_product'),
-                        color: Colors.orange,
+                      Text(
+                        lang.isSwahili
+                            ? 'Maagizo ya Hivi Karibuni'
+                            : 'Recent Orders',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1A1A2E),
+                        ),
                       ),
-                      _QuickCard(
-                        icon: Icons.inventory,
-                        label: lang.t('my_products'),
-                        color: Colors.blue,
-                      ),
-                      _QuickCard(
-                        icon: Icons.shopping_bag,
-                        label: lang.t('orders'),
-                        color: Colors.green,
-                      ),
-                      _QuickCard(
-                        icon: Icons.analytics,
-                        label: lang.t('sales_report'),
-                        color: Colors.purple,
+                      GestureDetector(
+                        onTap: () => onNavigate?.call(2),
+                        child: Text(
+                          lang.isSwahili ? 'Ona Zote' : 'See All',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: _indigo,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+
+                // Recent Orders list
+                _RecentOrdersList(uid: uid, lang: lang),
+                const SizedBox(height: 24),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _StatCard extends StatelessWidget {
+// ── Stat tile ──────────────────────────────────────────────────────────────
+class _StatTile extends StatelessWidget {
+  final IconData icon;
   final String label;
   final String value;
-  final IconData icon;
-  const _StatCard({
+  final Color color;
+  final bool smallValue;
+  const _StatTile({
+    required this.icon,
     required this.label,
     required this.value,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Icon(icon, color: Colors.white, size: 28),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Text(
-          label,
-          style: const TextStyle(color: Colors.white70, fontSize: 12),
-        ),
-      ],
-    );
-  }
-}
-
-class _QuickCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  const _QuickCard({
-    required this.icon,
-    required this.label,
     required this.color,
+    this.smallValue = false,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: Colors.grey.shade200,
-            blurRadius: 8,
+            blurRadius: 6,
             offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(9),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              shape: BoxShape.circle,
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: color, size: 28),
+            child: Icon(icon, color: color, size: 20),
           ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: smallValue ? 12 : 18,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF1A1A2E),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  label,
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -506,31 +635,241 @@ class _QuickCard extends StatelessWidget {
   }
 }
 
-class _OrdersPage extends StatelessWidget {
+// ── Recent orders list ─────────────────────────────────────────────────────
+class _RecentOrdersList extends StatelessWidget {
+  final String uid;
   final LanguageProvider lang;
-  const _OrdersPage({required this.lang});
+  const _RecentOrdersList({required this.uid, required this.lang});
+
+  static const _navy = Color(0xFF1E1B4B);
+
+  Color _statusColor(String s) {
+    switch (s) {
+      case 'pending':
+        return Colors.orange;
+      case 'confirmed':
+        return Colors.blue;
+      case 'delivered':
+        return Colors.green;
+      case 'cancelled':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _statusLabel(String s) {
+    if (lang.isSwahili) {
+      switch (s) {
+        case 'pending':
+          return 'Inasubiri';
+        case 'confirmed':
+          return 'Imethibitishwa';
+        case 'delivered':
+          return 'Imewasilishwa';
+        case 'cancelled':
+          return 'Imeghairiwa';
+        default:
+          return s;
+      }
+    }
+    switch (s) {
+      case 'pending':
+        return 'Pending';
+      case 'confirmed':
+        return 'Confirmed';
+      case 'delivered':
+        return 'Delivered';
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return s;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(lang.t('orders')),
-        backgroundColor: const Color(0xFF1E1B4B),
-        foregroundColor: Colors.white,
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.shopping_bag, size: 80, color: Colors.grey.shade300),
-            const SizedBox(height: 16),
-            Text(
-              lang.t('coming_soon'),
-              style: TextStyle(fontSize: 18, color: Colors.grey.shade500),
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('orders')
+          .orderBy('createdAt', descending: true)
+          .limit(20)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (!snapshot.hasData) return const SizedBox();
+
+        final orders = snapshot.data!.docs
+            .where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final items = (data['items'] as List?) ?? [];
+              return items.any((i) => i['sellerId'] == uid);
+            })
+            .take(5)
+            .toList();
+
+        if (orders.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.all(24),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.receipt_long_outlined,
+                    size: 60,
+                    color: Colors.grey.shade300,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    lang.isSwahili ? 'Hakuna maagizo bado' : 'No orders yet',
+                    style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
-      ),
+          );
+        }
+
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: orders.length,
+          itemBuilder: (context, index) {
+            final doc = orders[index];
+            final order = doc.data() as Map<String, dynamic>;
+            final items = (order['items'] as List?) ?? [];
+            final mine = items.where((i) => i['sellerId'] == uid).toList();
+            final status = order['status'] ?? 'pending';
+            final createdAt = order['createdAt'] as Timestamp?;
+            final subtotal = mine.fold<double>(
+              0,
+              (acc, i) => acc + ((i['price'] ?? 0) * (i['quantity'] ?? 1)),
+            );
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.shade200,
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: _statusColor(status).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.receipt_outlined,
+                      color: _statusColor(status),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              '${lang.isSwahili ? 'Agizo' : 'Order'} #${doc.id.substring(0, 6).toUpperCase()}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _statusColor(
+                                  status,
+                                ).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                _statusLabel(status),
+                                style: TextStyle(
+                                  color: _statusColor(status),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        FutureBuilder<DocumentSnapshot>(
+                          future: FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(order['customerId'])
+                              .get(),
+                          builder: (context, snap) {
+                            final c =
+                                snap.data?.data() as Map<String, dynamic>?;
+                            return Text(
+                              c?['fullName'] ??
+                                  c?['username'] ??
+                                  (lang.isSwahili ? 'Mteja' : 'Customer'),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade500,
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              createdAt != null
+                                  ? '${createdAt.toDate().day}/${createdAt.toDate().month}/${createdAt.toDate().year}'
+                                  : '',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey.shade400,
+                              ),
+                            ),
+                            Text(
+                              'TShs ${subtotal.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: _navy,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
