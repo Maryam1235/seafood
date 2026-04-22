@@ -78,8 +78,8 @@ class _SellerDashboardState extends State<SellerDashboard> {
         unselectedItemColor: Colors.grey,
         items: [
           BottomNavigationBarItem(
-            icon: const Icon(Icons.dashboard_outlined),
-            activeIcon: const Icon(Icons.dashboard),
+            icon: const Icon(Icons.home_outlined),
+            activeIcon: const Icon(Icons.home),
             label: lang.t('dashboard'),
           ),
           BottomNavigationBarItem(
@@ -171,7 +171,7 @@ class _SellerDashboardState extends State<SellerDashboard> {
                   children: [
                     _drawerTile(
                       context,
-                      Icons.dashboard_outlined,
+                      Icons.home_outlined,
                       lang.t('dashboard'),
                       0,
                     ),
