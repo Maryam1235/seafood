@@ -23,8 +23,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   // 1 = My Orders
   // 2 = Order History
   // 3 = Delivery Personnel
-  // 4 = Favorites
-  // 5 = My Profile
+  // 4 = My Profile
   int _currentIndex = 0;
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -52,15 +51,14 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
       OrdersScreen(onOpenDrawer: _openDrawer), // 1
       OrderHistoryScreen(onOpenDrawer: _openDrawer), // 2
       DeliveryPersonnelScreen(onOpenDrawer: _openDrawer), // 3
-      _FavoritesPage(lang: lang, onOpenDrawer: _openDrawer), // 4
       ProfileScreen(
         themeColor: const Color(0xFF3730A3),
         roleIcon: Icons.person,
         onOpenDrawer: _openDrawer,
-      ), // 5
+      ), // 4
     ];
 
-    // Bottom nav maps to: 0=Browse, 1=Orders, 4=Favorites, 5=Profile
+    // Bottom nav maps to: 0=Browse, 1=Orders, 2=Profile
     int bottomIndex;
     if (_currentIndex == 0) {
       bottomIndex = 0;
@@ -68,8 +66,6 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
       bottomIndex = 1;
     } else if (_currentIndex == 4) {
       bottomIndex = 2;
-    } else if (_currentIndex == 5) {
-      bottomIndex = 3;
     } else {
       bottomIndex = 1; // history/personnel stay highlighted under Orders
     }
@@ -83,7 +79,6 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
           if (i == 0) _currentIndex = 0;
           if (i == 1) _currentIndex = 1;
           if (i == 2) _currentIndex = 4;
-          if (i == 3) _currentIndex = 5;
         }),
         type: BottomNavigationBarType.fixed,
         selectedItemColor: const Color(0xFF3730A3),
@@ -98,11 +93,6 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
             icon: const Icon(Icons.receipt_long_outlined),
             activeIcon: const Icon(Icons.receipt_long),
             label: lang.t('my_orders'),
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.favorite_outline),
-            activeIcon: const Icon(Icons.favorite),
-            label: lang.t('favorites'),
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.person_outline),
@@ -240,15 +230,9 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                     ),
                     _drawerTile(
                       context,
-                      Icons.favorite_outline,
-                      lang.t('favorites'),
-                      4,
-                    ),
-                    _drawerTile(
-                      context,
                       Icons.person_outline,
                       lang.t('my_profile'),
-                      5,
+                      4,
                     ),
                   ],
                 ),
@@ -301,50 +285,6 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
         setState(() => _currentIndex = index);
         Navigator.pop(context);
       },
-    );
-  }
-}
-
-class _FavoritesPage extends StatelessWidget {
-  final LanguageProvider lang;
-  final VoidCallback? onOpenDrawer;
-  const _FavoritesPage({required this.lang, this.onOpenDrawer});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(lang.t('favorites')),
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF1E1B4B), Color(0xFF3730A3)],
-            ),
-          ),
-        ),
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: onOpenDrawer ?? () => Scaffold.of(context).openDrawer(),
-        ),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.favorite_outline, size: 80, color: Colors.grey.shade300),
-            const SizedBox(height: 16),
-            Text(
-              lang.t('coming_soon'),
-              style: TextStyle(fontSize: 18, color: Colors.grey.shade500),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
