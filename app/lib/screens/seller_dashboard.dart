@@ -73,8 +73,18 @@ class _SellerDashboardState extends State<SellerDashboard> {
       key: _scaffoldKey,
       body: IndexedStack(index: _currentIndex, children: pages),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (i) => setState(() => _currentIndex = i),
+        currentIndex: _currentIndex == 1
+            ? 0
+            : _currentIndex == 2
+            ? 1
+            : _currentIndex == 3
+            ? 2
+            : _currentIndex,
+        onTap: (i) => setState(() {
+          if (i == 0) _currentIndex = 0;
+          if (i == 1) _currentIndex = 2; // Orders is page index 2
+          if (i == 2) _currentIndex = 3; // Profile is page index 3
+        }),
         type: BottomNavigationBarType.fixed,
         selectedItemColor: const Color(0xFF1E1B4B),
         unselectedItemColor: Colors.grey,
@@ -83,11 +93,6 @@ class _SellerDashboardState extends State<SellerDashboard> {
             icon: const Icon(Icons.home_outlined),
             activeIcon: const Icon(Icons.home),
             label: lang.t('dashboard'),
-          ),
-          BottomNavigationBarItem(
-            icon: const Icon(Icons.inventory_2_outlined),
-            activeIcon: const Icon(Icons.inventory_2),
-            label: lang.t('my_products'),
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.shopping_bag_outlined),
