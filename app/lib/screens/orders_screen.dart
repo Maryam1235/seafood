@@ -102,7 +102,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
         stream: FirebaseFirestore.instance
             .collection('orders')
             .where('customerId', isEqualTo: uid)
-            .orderBy('createdAt', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -236,6 +235,17 @@ class _OrdersScreenState extends State<OrdersScreen> {
           // ── Apply sort + filter ────────────────────────────────
           var orders = snapshot.data!.docs.toList();
 
+          // Sort client-side by createdAt (newest first by default)
+          orders.sort((a, b) {
+            final aTime = (a.data() as Map)['createdAt'] as Timestamp?;
+            final bTime = (b.data() as Map)['createdAt'] as Timestamp?;
+            if (aTime == null && bTime == null) return 0;
+            if (aTime == null) return 1;
+            if (bTime == null) return -1;
+            return bTime.compareTo(aTime);
+          });
+          if (_sortBy == 'oldest') orders = orders.reversed.toList();
+
           // Status filter
           if (_filterStatus != 'all') {
             orders = orders.where((doc) {
@@ -257,11 +267,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
               );
               return idMatch || itemMatch;
             }).toList();
-          }
-
-          // Sort (Firestore already returns newest-first; reverse for oldest)
-          if (_sortBy == 'oldest') {
-            orders = orders.reversed.toList();
           }
 
           if (orders.isEmpty) {

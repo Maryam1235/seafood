@@ -28,6 +28,23 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final _authService = AuthService();
+  late final List<Widget> _pages;
+
+  @override
+  void initState() {
+    super.initState();
+    _pages = [
+      BrowseSeafoodScreen(onOpenDrawer: _openDrawer), // 0
+      OrdersScreen(onOpenDrawer: _openDrawer), // 1
+      OrderHistoryScreen(onOpenDrawer: _openDrawer), // 2
+      DeliveryPersonnelScreen(onOpenDrawer: _openDrawer), // 3
+      ProfileScreen(
+        themeColor: const Color(0xFF3730A3),
+        roleIcon: Icons.person,
+        onOpenDrawer: _openDrawer,
+      ), // 4
+    ];
+  }
 
   Future<void> _logout() async {
     await _authService.logout();
@@ -46,18 +63,6 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   Widget build(BuildContext context) {
     final lang = context.watch<LanguageProvider>();
 
-    final pages = [
-      BrowseSeafoodScreen(onOpenDrawer: _openDrawer), // 0
-      OrdersScreen(onOpenDrawer: _openDrawer), // 1
-      OrderHistoryScreen(onOpenDrawer: _openDrawer), // 2
-      DeliveryPersonnelScreen(onOpenDrawer: _openDrawer), // 3
-      ProfileScreen(
-        themeColor: const Color(0xFF3730A3),
-        roleIcon: Icons.person,
-        onOpenDrawer: _openDrawer,
-      ), // 4
-    ];
-
     // Bottom nav maps to: 0=Browse, 1=Orders, 2=Profile
     int bottomIndex;
     if (_currentIndex == 0) {
@@ -72,7 +77,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
 
     return Scaffold(
       key: _scaffoldKey,
-      body: IndexedStack(index: _currentIndex, children: pages),
+      body: IndexedStack(index: _currentIndex, children: _pages),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: bottomIndex,
         onTap: (i) => setState(() {
