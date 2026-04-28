@@ -73,6 +73,22 @@ export default function ProductsTable({ onAddProduct, onEditProduct }) {
         <button className={styles.addBtn} onClick={onAddProduct}>+ Add Product</button>
       </div>
 
+      {/* Stats */}
+      <div className={styles.statsRow}>
+        {[
+          { label: 'Total Products', value: products.length,                                    color: '#4f46e5', bg: '#e0e7ff' },
+          { label: 'Active',         value: products.filter(p => p.isAvailable).length,         color: '#065f46', bg: '#d1fae5' },
+          { label: 'Inactive',       value: products.filter(p => !p.isAvailable).length,        color: '#dc2626', bg: '#fee2e2' },
+          { label: 'Categories',     value: new Set(products.map(p => p.category).filter(Boolean)).size, color: '#7c3aed', bg: '#ede9fe' },
+          { label: 'Sellers',        value: new Set(products.map(p => p.sellerId).filter(Boolean)).size, color: '#0369a1', bg: '#e0f2fe' },
+        ].map(s => (
+          <div key={s.label} className={styles.statCard} style={{ borderTop: `3px solid ${s.color}` }}>
+            <div className={styles.statValue} style={{ color: s.color }}>{s.value}</div>
+            <div className={styles.statLabel}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
       {/* Toolbar */}
       <div className={styles.toolbar}>
         <input className={styles.search} placeholder="Search by name, category, location..."

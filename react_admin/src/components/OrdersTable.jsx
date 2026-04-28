@@ -97,6 +97,28 @@ export default function OrdersTable() {
         <span className={styles.count}>{filtered.length} orders</span>
       </div>
 
+      {/* Stats */}
+      <div className={styles.statsRow}>
+        {[
+          { label: 'Total Orders', value: orders.length,                                          color: '#4f46e5', bg: '#e0e7ff' },
+          { label: 'Pending',      value: orders.filter(o => o.status === 'pending').length,      color: '#b45309', bg: '#fef3c7' },
+          { label: 'Confirmed',    value: orders.filter(o => o.status === 'confirmed').length,    color: '#1d4ed8', bg: '#dbeafe' },
+          { label: 'Delivered',    value: orders.filter(o => o.status === 'delivered').length,    color: '#065f46', bg: '#d1fae5' },
+          { label: 'Cancelled',    value: orders.filter(o => o.status === 'cancelled').length,    color: '#dc2626', bg: '#fee2e2' },
+          { label: 'Revenue',
+            value: 'TShs ' + orders
+              .filter(o => o.status === 'delivered')
+              .reduce((sum, o) => sum + (o.total || 0), 0)
+              .toLocaleString(),
+            color: '#065f46', bg: '#d1fae5', small: true },
+        ].map(s => (
+          <div key={s.label} className={styles.statCard} style={{ borderTop: `3px solid ${s.color}` }}>
+            <div className={styles.statValue} style={{ color: s.color, fontSize: s.small ? '16px' : undefined }}>{s.value}</div>
+            <div className={styles.statLabel}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
       <div className={styles.toolbar}>
         <input className={styles.search} placeholder="Search by order ID, customer name, phone..."
           value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />

@@ -3,15 +3,16 @@ import { auth } from '../firebase';
 import { useEffect, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { LayoutDashboard, Users, Fish, ShoppingBag, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, Fish, ShoppingBag, Truck, Settings, LogOut } from 'lucide-react';
 import styles from './Sidebar.module.css';
 
 const navItems = [
-  { id: 'overview',  label: 'Dashboard',        icon: LayoutDashboard },
-  { id: 'users',     label: 'User Management',   icon: Users },
-  { id: 'products',  label: 'Products Management',          icon: Fish },
-  { id: 'orders',    label: 'Orders Management',            icon: ShoppingBag },
-  { id: 'settings',  label: 'Settings',          icon: Settings },
+  { id: 'overview',  label: 'Dashboard',          icon: LayoutDashboard },
+  { id: 'users',     label: 'User Management',     icon: Users },
+  { id: 'products',  label: 'Products Management', icon: Fish },
+  { id: 'orders',    label: 'Orders Management',   icon: ShoppingBag },
+  { id: 'delivery',  label: 'Delivery Management', icon: Truck },
+  { id: 'settings',  label: 'Settings',            icon: Settings },
 ];
 
 export default function Sidebar({ activePage, setActivePage, collapsed }) {
