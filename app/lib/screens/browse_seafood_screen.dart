@@ -789,29 +789,46 @@ class _ProductDetailSheet extends StatelessWidget {
                     height: 54,
                     child: ElevatedButton.icon(
                       onPressed: () async {
-                        await CartService().addToCart(product);
-                        if (context.mounted) {
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(rootContext).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                lang.isSwahili
-                                    ? 'Imeongezwa kwenye magulio!'
-                                    : 'Added to cart!',
-                              ),
-                              backgroundColor: _navy,
-                              action: SnackBarAction(
-                                label: lang.isSwahili ? 'Tazama' : 'View Cart',
-                                textColor: Colors.white,
-                                onPressed: () => Navigator.push(
-                                  rootContext,
-                                  MaterialPageRoute(
-                                    builder: (_) => const CartScreen(),
+                        try {
+                          await CartService().addToCart(product);
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(rootContext).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  lang.isSwahili
+                                      ? 'Imeongezwa kwenye magulio!'
+                                      : 'Added to cart!',
+                                ),
+                                backgroundColor: _navy,
+                                action: SnackBarAction(
+                                  label: lang.isSwahili
+                                      ? 'Tazama'
+                                      : 'View Cart',
+                                  textColor: Colors.white,
+                                  onPressed: () => Navigator.push(
+                                    rootContext,
+                                    MaterialPageRoute(
+                                      builder: (_) => const CartScreen(),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          );
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(rootContext).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  lang.isSwahili
+                                      ? 'Samahani, hisa haitoshi!'
+                                      : 'Sorry, not enough stock available!',
+                                ),
+                                backgroundColor: Colors.red.shade700,
+                              ),
+                            );
+                          }
                         }
                       },
                       icon: const Icon(Icons.shopping_cart_outlined),

@@ -155,12 +155,37 @@ class CartScreen extends StatelessWidget {
                                           ),
                                         ),
                                       ),
-                                      _qtyBtn(
-                                        Icons.add,
-                                        () => cartService.updateQuantity(
-                                          item['id'],
-                                          qty + 1,
-                                        ),
+                                      FutureBuilder<DocumentSnapshot>(
+                                        future: FirebaseFirestore.instance
+                                            .collection('products')
+                                            .doc(
+                                              item['productId'] ?? item['id'],
+                                            )
+                                            .get(),
+                                        builder: (context, stockSnap) {
+                                          final stock = stockSnap.hasData
+                                              ? ((stockSnap.data!.data()
+                                                            as Map<
+                                                              String,
+                                                              dynamic
+                                                            >?)?['stock'] ??
+                                                        0)
+                                                    as num
+                                              : double.infinity;
+                                          final atMax = qty >= stock;
+                                          return _qtyBtn(
+                                            Icons.add,
+                                            atMax
+                                                ? null
+                                                : () => cartService
+                                                      .updateQuantity(
+                                                        item['id'],
+                                                        qty + 1,
+                                                        maxStock: stock
+                                                            .toDouble(),
+                                                      ),
+                                          );
+                                        },
                                       ),
                                     ],
                                   ),
@@ -269,18 +294,23 @@ class CartScreen extends StatelessWidget {
     );
   }
 
-  Widget _qtyBtn(IconData icon, VoidCallback onTap) {
+  Widget _qtyBtn(IconData icon, VoidCallback? onTap) {
+    final disabled = onTap == null;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 30,
         height: 30,
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F6FA),
+          color: disabled ? Colors.grey.shade100 : const Color(0xFFF5F6FA),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: Colors.grey.shade200),
         ),
-        child: Icon(icon, size: 16, color: _navy),
+        child: Icon(
+          icon,
+          size: 16,
+          color: disabled ? Colors.grey.shade300 : _navy,
+        ),
       ),
     );
   }
