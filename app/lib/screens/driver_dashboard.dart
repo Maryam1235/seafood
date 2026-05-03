@@ -8,6 +8,7 @@ import 'login_screen.dart';
 import 'profile_screen.dart';
 import 'driver_notifications_screen.dart';
 import 'driver_deliveries_screen.dart';
+import 'driver_messages_screen.dart';
 
 class DriverDashboard extends StatefulWidget {
   const DriverDashboard({super.key});
@@ -73,25 +74,39 @@ class _DriverDashboardState extends State<DriverDashboard> {
         roleIcon: Icons.delivery_dining,
         onOpenDrawer: _openDrawer,
       ), // 6
+      DriverMessagesScreen(onOpenDrawer: _openDrawer), // 7
     ];
 
-    // Bottom nav: 0=Home, 1=Alerts, 2=Profile (maps to page indices 0,1,6)
-    final bottomIndex = _currentIndex == 6 ? 2 : (_currentIndex == 1 ? 1 : 0);
+    // Bottom nav: 0=Home, 1=Alerts, 2=Messages, 3=Profile
+    int bottomIndex;
+    if (_currentIndex == 0) {
+      bottomIndex = 0;
+    } else if (_currentIndex == 1) {
+      bottomIndex = 1;
+    } else if (_currentIndex == 7) {
+      bottomIndex = 2;
+    } else if (_currentIndex == 6) {
+      bottomIndex = 3;
+    } else {
+      bottomIndex = 0;
+    }
 
     return Scaffold(
       key: _scaffoldKey,
       body: IndexedStack(index: _currentIndex, children: pages),
 
-      // 3-item bottom nav
+      // 4-item bottom nav
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: bottomIndex,
         onTap: (i) => setState(() {
           if (i == 0) _currentIndex = 0;
           if (i == 1) _currentIndex = 1;
-          if (i == 2) _currentIndex = 6;
+          if (i == 2) _currentIndex = 7;
+          if (i == 3) _currentIndex = 6;
         }),
         selectedItemColor: Colors.teal.shade700,
         unselectedItemColor: Colors.grey,
+        type: BottomNavigationBarType.fixed,
         items: [
           BottomNavigationBarItem(
             icon: const Icon(Icons.home_outlined),
@@ -138,6 +153,38 @@ class _DriverDashboardState extends State<DriverDashboard> {
               },
             ),
             label: lang.isSwahili ? 'Arifa' : 'Alerts',
+          ),
+          // Messages tab with unread badge
+          BottomNavigationBarItem(
+            icon: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('chats')
+                  .where('participants', arrayContains: uid)
+                  .snapshots(),
+              builder: (context, chatSnap) {
+                final hasChats = chatSnap.data?.docs.isNotEmpty ?? false;
+                return Stack(
+                  children: [
+                    const Icon(Icons.chat_bubble_outline),
+                    if (hasChats)
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+            activeIcon: const Icon(Icons.chat_bubble),
+            label: lang.isSwahili ? 'Ujumbe' : 'Messages',
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.person_outline),
@@ -271,6 +318,14 @@ class _DriverDashboardState extends State<DriverDashboard> {
                       ),
                       _drawerTile(
                         context,
+                        Icons.chat_bubble_outline,
+                        lang.isSwahili ? 'Ujumbe' : 'Messages',
+                        7,
+                        uid: uid,
+                        isMessages: true,
+                      ),
+                      _drawerTile(
+                        context,
                         Icons.person_outline,
                         lang.t('my_profile'),
                         6,
@@ -308,6 +363,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
     String label,
     int index, {
     String? uid,
+    bool isMessages = false,
   }) {
     final selected = _currentIndex == index;
     return ListTile(
@@ -347,6 +403,29 @@ class _DriverDashboardState extends State<DriverDashboard> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          if (uid != null && isMessages)
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('chats')
+                  .where('participants', arrayContains: uid)
+                  .snapshots(),
+              builder: (context, snap) {
+                final hasChats = (snap.data?.docs.isNotEmpty ?? false);
+                if (!hasChats) return const SizedBox();
+                return Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
                     ),
                   ),
                 );

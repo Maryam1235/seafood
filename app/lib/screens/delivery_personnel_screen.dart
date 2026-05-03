@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/language_provider.dart';
+import 'chat_screen.dart';
 
 class DeliveryPersonnelScreen extends StatelessWidget {
   final VoidCallback? onOpenDrawer;
@@ -102,6 +104,8 @@ class _DriverCard extends StatelessWidget {
   final String driverId;
   final LanguageProvider lang;
 
+  static const _navy = Color(0xFF1E1B4B);
+
   const _DriverCard({
     required this.name,
     required this.phone,
@@ -110,6 +114,49 @@ class _DriverCard extends StatelessWidget {
     required this.driverId,
     required this.lang,
   });
+
+  Future<void> _call(BuildContext context) async {
+    if (phone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            lang.isSwahili
+                ? 'Nambari ya simu haipatikani'
+                : 'Phone number not available',
+          ),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+      return;
+    }
+
+    final uri = Uri(scheme: 'tel', path: phone);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              lang.isSwahili
+                  ? 'Imeshindwa kupiga simu'
+                  : 'Could not launch phone call',
+            ),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+      }
+    }
+  }
+
+  void _openChat(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChatScreen(driverId: driverId, driverName: name),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -128,96 +175,160 @@ class _DriverCard extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(
+        child: Column(
           children: [
-            // Avatar with online indicator
-            Stack(
+            Row(
               children: [
-                CircleAvatar(
-                  radius: 28,
-                  backgroundColor: const Color(
-                    0xFF3730A3,
-                  ).withValues(alpha: 0.12),
-                  child: Text(
-                    initial,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF3730A3),
+                // Avatar with online indicator
+                Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 28,
+                      backgroundColor: const Color(
+                        0xFF3730A3,
+                      ).withValues(alpha: 0.12),
+                      child: Text(
+                        initial,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF3730A3),
+                        ),
+                      ),
                     ),
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: 14,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          color: isOnline ? Colors.green : Colors.grey.shade400,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 14),
+
+                // Driver info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.phone_outlined,
+                            size: 13,
+                            color: Colors.grey.shade500,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            phone.isNotEmpty ? phone : '—',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      _DeliveryStats(driverId: driverId, lang: lang),
+                    ],
                   ),
                 ),
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    width: 14,
-                    height: 14,
-                    decoration: BoxDecoration(
-                      color: isOnline ? Colors.green : Colors.grey.shade400,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
+
+                // Online/Offline badge
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isOnline
+                        ? Colors.green.shade50
+                        : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    isOnline
+                        ? (lang.isSwahili ? 'Mtandaoni' : 'Online')
+                        : (lang.isSwahili ? 'Nje' : 'Offline'),
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: isOnline ? Colors.green.shade700 : Colors.grey,
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(width: 14),
 
-            // Driver info
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
+            const SizedBox(height: 14),
+            const Divider(height: 1),
+            const SizedBox(height: 12),
+
+            // ── Action buttons ────────────────────────────────────────
+            Row(
+              children: [
+                // Call button
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _call(context),
+                    icon: const Icon(Icons.call_outlined, size: 18),
+                    label: Text(
+                      lang.isSwahili ? 'Piga Simu' : 'Call',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.green.shade700,
+                      side: BorderSide(color: Colors.green.shade300),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.phone_outlined,
-                        size: 13,
-                        color: Colors.grey.shade500,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        phone.isNotEmpty ? phone : '—',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  // Delivery stats
-                  _DeliveryStats(driverId: driverId, lang: lang),
-                ],
-              ),
-            ),
-
-            // Online/Offline badge
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: isOnline ? Colors.green.shade50 : Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                isOnline
-                    ? (lang.isSwahili ? 'Mtandaoni' : 'Online')
-                    : (lang.isSwahili ? 'Nje' : 'Offline'),
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: isOnline ? Colors.green.shade700 : Colors.grey,
                 ),
-              ),
+                const SizedBox(width: 10),
+                // Message button
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _openChat(context),
+                    icon: const Icon(Icons.chat_bubble_outline, size: 18),
+                    label: Text(
+                      lang.isSwahili ? 'Tuma Ujumbe' : 'Message',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _navy,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
