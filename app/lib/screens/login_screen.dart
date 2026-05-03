@@ -37,6 +37,9 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
 
+    // Read lang here so it's available in the catch block
+    final lang = context.read<LanguageProvider>();
+
     try {
       await _authService.login(
         email: _emailController.text.trim(),
@@ -120,11 +123,23 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     } catch (e) {
       if (mounted) {
+        final msg = e.toString();
+        String displayMsg;
+        if (msg.contains('account_deleted')) {
+          displayMsg = lang.isSwahili
+              ? 'Akaunti hii imefutwa. Tafadhali wasiliana na msaada.'
+              : 'This account has been deleted. Please contact support.';
+        } else if (msg.contains('account_banned')) {
+          displayMsg = lang.isSwahili
+              ? 'Akaunti yako imezuiwa. Tafadhali wasiliana na msaada.'
+              : 'Your account has been suspended. Please contact support.';
+        } else {
+          displayMsg = lang.isSwahili
+              ? 'Imeshindwa kuingia. Angalia barua pepe na nywila.'
+              : 'Login failed. Check your email and password.';
+        }
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Login failed: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text(displayMsg), backgroundColor: Colors.red),
         );
       }
     } finally {

@@ -100,6 +100,18 @@ class _SplashScreenState extends State<SplashScreen>
 
     if (!mounted) return;
 
+    // If the Firestore doc was deleted or account was banned by admin, sign out
+    if (!doc.exists ||
+        doc.data()?['deleted'] == true ||
+        doc.data()?['active'] == false) {
+      await FirebaseAuth.instance.signOut();
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+      return;
+    }
+
     final role = doc.data()?['role'] ?? 'customer';
 
     Widget destination;

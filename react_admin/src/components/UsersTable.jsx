@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Eye, Pencil, Trash2 } from 'lucide-react';
 import styles from './UsersTable.module.css';
@@ -12,6 +12,7 @@ export default function UsersTable({ onAddUser, onEditUser }) {
   const [search, setSearch]         = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [sortBy, setSortBy]         = useState('createdAt');
+  const [showDeleted, setShowDeleted] = useState(false);
   const [viewUser, setViewUser]     = useState(null);
   const [page, setPage]             = useState(1);
   const PAGE_SIZE = 10;
@@ -30,20 +31,27 @@ export default function UsersTable({ onAddUser, onEditUser }) {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
-      await deleteDoc(doc(db, 'users', id));
+    if (window.confirm('Are you sure you want to delete this user? They will be immediately signed out and blocked from logging in.')) {
+      // Mark as deleted in Firestore — the Flutter app checks this flag on login/splash
+      // We keep the doc so audit history is preserved; the user is effectively blocked
+      await updateDoc(doc(db, 'users', id), {
+        active: false,
+        deleted: true,
+        deletedAt: new Date().toISOString(),
+      });
     }
   };
 
   const filtered = users.filter(u => {
     const matchRole = roleFilter === 'all' || u.role === roleFilter;
+    const matchDeleted = showDeleted ? u.deleted === true : u.deleted !== true;
     const q = search.toLowerCase();
     const matchSearch = !q ||
       (u.fullName || '').toLowerCase().includes(q) ||
       (u.email || '').toLowerCase().includes(q) ||
       (u.phone || '').toLowerCase().includes(q) ||
       (u.username || '').toLowerCase().includes(q);
-    return matchRole && matchSearch;
+    return matchRole && matchDeleted && matchSearch;
   }).sort((a, b) => {
     if (sortBy === 'fullName') return (a.fullName || '').localeCompare(b.fullName || '');
     if (sortBy === 'role') return (a.role || '').localeCompare(b.role || '');
@@ -87,6 +95,13 @@ export default function UsersTable({ onAddUser, onEditUser }) {
           <option value="role">Sort by Role</option>
           <option value="active">Sort by Status</option>
         </select>
+        <button
+          className={styles.filter}
+          onClick={() => { setShowDeleted(v => !v); setPage(1); }}
+          style={{ background: showDeleted ? '#fee2e2' : 'white', color: showDeleted ? '#dc2626' : '#374151', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, flexGrow: 0 }}
+        >
+          {showDeleted ? '🗑 Deleted' : 'Active'}
+        </button>
       </div>
 
       <div className={styles.tableWrap}>

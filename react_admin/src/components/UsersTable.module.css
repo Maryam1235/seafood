@@ -1,28 +1,37 @@
 .toolbar {
   display: flex;
-  gap: 12px;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
   margin-bottom: 20px;
 }
 
 .search {
-  flex: 1;
+  flex: 2 1 0;
   padding: 10px 16px;
-  border: 1px solid #d1d5db;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
   font-size: 14px;
   outline: none;
+  background: white;
+  min-width: 0;
 }
 
 .search:focus { border-color: #6366f1; }
 
+.filters { display: none; }
+
 .filter {
-  padding: 10px 16px;
+  flex: 0 0 auto;
+  width: auto;
+  padding: 10px 14px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
   font-size: 14px;
   outline: none;
   background: white;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .tableWrap {

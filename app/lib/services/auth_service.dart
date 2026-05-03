@@ -52,12 +52,28 @@ class AuthService {
     required String password,
   }) async {
     try {
-      return await _auth.signInWithEmailAndPassword(
+      final credential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
+
+      // Check if the Firestore user document still exists and is not deleted/banned
+      final uid = credential.user!.uid;
+      final doc = await _firestore.collection('users').doc(uid).get();
+
+      if (!doc.exists || doc.data()?['deleted'] == true) {
+        await _auth.signOut();
+        throw Exception('account_deleted');
+      }
+
+      if (doc.data()?['active'] == false) {
+        await _auth.signOut();
+        throw Exception('account_banned');
+      }
+
+      return credential;
     } catch (e) {
-      throw Exception(e.toString());
+      rethrow;
     }
   }
 
