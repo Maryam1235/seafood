@@ -149,6 +149,10 @@ class LanguageProvider extends ChangeNotifier {
       // Customer sidebar extras
       'order_history': 'Order History',
       'delivery_personnel': 'Delivery Personnel',
+
+      // Settings
+      'settings': 'Settings',
+      'home': 'Home',
     },
     'sw': {
       // Login
@@ -273,6 +277,10 @@ class LanguageProvider extends ChangeNotifier {
       // Customer sidebar extras
       'order_history': 'Historia ya Maagizo',
       'delivery_personnel': 'Madereva wa Utoaji',
+
+      // Settings
+      'settings': 'Mipangilio',
+      'home': 'Nyumbani',
     },
   };
 }

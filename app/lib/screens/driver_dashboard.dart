@@ -9,6 +9,7 @@ import 'profile_screen.dart';
 import 'driver_notifications_screen.dart';
 import 'driver_deliveries_screen.dart';
 import 'driver_messages_screen.dart';
+import 'settings_screen.dart';
 
 class DriverDashboard extends StatefulWidget {
   const DriverDashboard({super.key});
@@ -75,6 +76,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
         onOpenDrawer: _openDrawer,
       ), // 6
       DriverMessagesScreen(onOpenDrawer: _openDrawer), // 7
+      SettingsScreen(
+        themeColor: Colors.teal.shade700,
+        onOpenDrawer: _openDrawer,
+      ), // 8
     ];
 
     // Bottom nav: 0=Home, 1=Alerts, 2=Messages, 3=Profile
@@ -88,7 +93,8 @@ class _DriverDashboardState extends State<DriverDashboard> {
     } else if (_currentIndex == 6) {
       bottomIndex = 3;
     } else {
-      bottomIndex = 0;
+      bottomIndex =
+          0; // active/available/history/earnings/settings → keep Home highlighted
     }
 
     return Scaffold(
@@ -329,6 +335,12 @@ class _DriverDashboardState extends State<DriverDashboard> {
                         Icons.person_outline,
                         lang.t('my_profile'),
                         6,
+                      ),
+                      _drawerTile(
+                        context,
+                        Icons.settings_outlined,
+                        lang.t('settings'),
+                        8,
                       ),
                     ],
                   ),

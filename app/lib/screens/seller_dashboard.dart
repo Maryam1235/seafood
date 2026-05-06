@@ -9,6 +9,7 @@ import 'seller_products_page.dart';
 import 'profile_screen.dart';
 import 'seller_orders_screen.dart';
 import 'add_product_screen.dart';
+import 'settings_screen.dart';
 
 class SellerDashboard extends StatefulWidget {
   const SellerDashboard({super.key});
@@ -67,19 +68,23 @@ class _SellerDashboardState extends State<SellerDashboard> {
         roleIcon: Icons.store,
         onOpenDrawer: _openDrawer,
       ),
+      SettingsScreen(
+        themeColor: const Color(0xFF1E1B4B),
+        onOpenDrawer: _openDrawer,
+      ),
     ];
 
     return Scaffold(
       key: _scaffoldKey,
       body: IndexedStack(index: _currentIndex, children: pages),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex == 1
-            ? 0
-            : _currentIndex == 2
+        currentIndex: _currentIndex == 2
             ? 1
             : _currentIndex == 3
             ? 2
-            : _currentIndex,
+            : _currentIndex == 4
+            ? 2 // Settings → keep Profile tab highlighted
+            : 0, // Home (index 0) and Products (index 1) → Home tab
         onTap: (i) => setState(() {
           if (i == 0) _currentIndex = 0;
           if (i == 1) _currentIndex = 2; // Orders is page index 2
@@ -199,6 +204,12 @@ class _SellerDashboardState extends State<SellerDashboard> {
                       Icons.person_outline,
                       lang.t('my_profile'),
                       3,
+                    ),
+                    _drawerTile(
+                      context,
+                      Icons.settings_outlined,
+                      lang.t('settings'),
+                      4,
                     ),
                   ],
                 ),

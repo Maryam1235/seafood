@@ -10,6 +10,7 @@ import 'browse_seafood_screen.dart';
 import 'orders_screen.dart';
 import 'order_history_screen.dart';
 import 'delivery_personnel_screen.dart';
+import 'settings_screen.dart';
 
 class CustomerDashboard extends StatefulWidget {
   const CustomerDashboard({super.key});
@@ -24,6 +25,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   // 2 = Order History
   // 3 = Delivery Personnel
   // 4 = My Profile
+  // 5 = Settings
   int _currentIndex = 0;
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -43,6 +45,10 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
         roleIcon: Icons.person,
         onOpenDrawer: _openDrawer,
       ), // 4
+      SettingsScreen(
+        themeColor: const Color(0xFF3730A3),
+        onOpenDrawer: _openDrawer,
+      ), // 5
     ];
   }
 
@@ -238,6 +244,12 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                       Icons.person_outline,
                       lang.t('my_profile'),
                       4,
+                    ),
+                    _drawerTile(
+                      context,
+                      Icons.settings_outlined,
+                      lang.t('settings'),
+                      5,
                     ),
                   ],
                 ),
