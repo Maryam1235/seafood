@@ -233,12 +233,8 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                       lang.t('order_history'),
                       2,
                     ),
-                    _drawerTile(
-                      context,
-                      Icons.delivery_dining_outlined,
-                      lang.t('delivery_personnel'),
-                      3,
-                    ),
+                    // Delivery Personnel tile with unread badge
+                    _drawerTileWithBadge(context, lang, user),
                     _drawerTile(
                       context,
                       Icons.person_outline,
@@ -303,5 +299,120 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
         Navigator.pop(context);
       },
     );
+  }
+
+  /// Delivery Personnel tile — streams total unread messages from all drivers
+  Widget _drawerTileWithBadge(
+    BuildContext context,
+    LanguageProvider lang,
+    User? user,
+  ) {
+    if (user == null) {
+      return _drawerTile(
+        context,
+        Icons.delivery_dining_outlined,
+        lang.t('delivery_personnel'),
+        3,
+      );
+    }
+    final isSelected = _currentIndex == 3;
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('chats')
+          .where('participants', arrayContains: user.uid)
+          .snapshots(),
+      builder: (context, chatSnap) {
+        // For each chat, count unread messages sent by the driver
+        final chatDocs = chatSnap.data?.docs ?? [];
+
+        return FutureBuilder<int>(
+          future: _countTotalUnread(chatDocs, user.uid),
+          builder: (context, countSnap) {
+            final totalUnread = countSnap.data ?? 0;
+
+            return ListTile(
+              leading: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(
+                    Icons.delivery_dining_outlined,
+                    color: isSelected ? Colors.white : Colors.white70,
+                  ),
+                  if (totalUnread > 0)
+                    Positioned(
+                      top: -4,
+                      right: -6,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 1,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: const Color(0xFF1E1B4B),
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Text(
+                          '$totalUnread',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              title: Text(
+                lang.t('delivery_personnel'),
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.white70,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+              tileColor: isSelected
+                  ? Colors.white.withValues(alpha: 0.12)
+                  : Colors.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              onTap: () {
+                setState(() => _currentIndex = 3);
+                Navigator.pop(context);
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<int> _countTotalUnread(
+    List<QueryDocumentSnapshot> chatDocs,
+    String myUid,
+  ) async {
+    int total = 0;
+    for (final chat in chatDocs) {
+      final data = chat.data() as Map<String, dynamic>;
+      final participants = List<String>.from(data['participants'] ?? []);
+      final driverId = participants.firstWhere(
+        (p) => p != myUid,
+        orElse: () => '',
+      );
+      if (driverId.isEmpty) continue;
+      final msgs = await FirebaseFirestore.instance
+          .collection('chats')
+          .doc(chat.id)
+          .collection('messages')
+          .where('senderId', isEqualTo: driverId)
+          .get();
+      total += msgs.docs.where((d) => d.data()['read'] != true).length;
+    }
+    return total;
   }
 }

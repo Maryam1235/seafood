@@ -65,11 +65,25 @@ class _DriverNotificationsScreenState extends State<DriverNotificationsScreen> {
             );
           }
 
+          // Sort newest first client-side (avoids needing a Firestore composite index)
+          final docs = [...snapshot.data!.docs];
+          docs.sort((a, b) {
+            final aTs =
+                ((a.data() as Map<String, dynamic>)['createdAt'] as Timestamp?)
+                    ?.millisecondsSinceEpoch ??
+                0;
+            final bTs =
+                ((b.data() as Map<String, dynamic>)['createdAt'] as Timestamp?)
+                    ?.millisecondsSinceEpoch ??
+                0;
+            return bTs.compareTo(aTs); // newest first
+          });
+
           return ListView.builder(
             padding: const EdgeInsets.all(16),
-            itemCount: snapshot.data!.docs.length,
+            itemCount: docs.length,
             itemBuilder: (context, index) {
-              final doc = snapshot.data!.docs[index];
+              final doc = docs[index];
               final notif = doc.data() as Map<String, dynamic>;
               final isRead = notif['read'] == true;
               final isDelivery = notif['type'] == 'new_delivery';

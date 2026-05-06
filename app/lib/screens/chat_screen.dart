@@ -35,6 +35,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   String get _currentUid => FirebaseAuth.instance.currentUser!.uid;
 
+  /// The OTHER person's uid — whose messages we mark as read
+  String get _otherUid => widget.driverId;
+
   /// Deterministic chat room id — always the same for a given pair
   String get _chatId {
     final ids = [_currentUid, widget.driverId]..sort();
@@ -45,6 +48,26 @@ class _ChatScreenState extends State<ChatScreen> {
       .collection('chats')
       .doc(_chatId)
       .collection('messages');
+
+  @override
+  void initState() {
+    super.initState();
+    // Mark all existing unread messages as read as soon as the screen opens
+    _markMessagesAsRead();
+  }
+
+  /// Batch-marks every unread message sent by the other person as read
+  Future<void> _markMessagesAsRead() async {
+    final snap = await _messages.where('senderId', isEqualTo: _otherUid).get();
+    final batch = FirebaseFirestore.instance.batch();
+    for (final doc in snap.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      if (data['read'] != true) {
+        batch.update(doc.reference, {'read': true});
+      }
+    }
+    await batch.commit();
+  }
 
   Future<void> _send() async {
     final text = _controller.text.trim();
@@ -199,6 +222,14 @@ class _ChatScreenState extends State<ChatScreen> {
                     );
                   }
                 });
+
+                // Mark any newly arrived messages as read while screen is open
+                for (final doc in docs) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  if (data['senderId'] == _otherUid && data['read'] != true) {
+                    doc.reference.update({'read': true});
+                  }
+                }
 
                 return ListView.builder(
                   controller: _scrollController,
