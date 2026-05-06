@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../providers/language_provider.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
@@ -101,72 +100,91 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _showDeleteAccountDialog() async {
-    final lang = context.read<LanguageProvider>();
-    final confirm = await showDialog<bool>(
+  void _showInfoSheet({
+    required LanguageProvider lang,
+    required IconData icon,
+    required String title,
+    required String content,
+  }) {
+    showModalBottomSheet(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.red.shade400),
-            const SizedBox(width: 8),
-            Text(
-              lang.isSwahili ? 'Futa Akaunti' : 'Delete Account',
-              style: const TextStyle(fontSize: 18),
-            ),
-          ],
-        ),
-        content: Text(
-          lang.isSwahili
-              ? 'Hatua hii haiwezi kutenduliwa. Data yako yote itafutwa.'
-              : 'This action cannot be undone. All your data will be permanently deleted.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(lang.t('cancel')),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.75,
+        maxChildSize: 0.95,
+        minChildSize: 0.4,
+        builder: (_, controller) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red.shade600,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+          child: Column(
+            children: [
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.only(top: 12, bottom: 4),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
-            child: Text(lang.isSwahili ? 'Futa' : 'Delete'),
+              // Header
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: widget.themeColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(icon, color: widget.themeColor, size: 22),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF111827),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close, color: Colors.grey.shade400),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 24),
+              // Scrollable content
+              Expanded(
+                child: ListView(
+                  controller: controller,
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+                  children: [
+                    Text(
+                      content,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade700,
+                        height: 1.7,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
-
-    if (confirm == true) {
-      final uid = FirebaseAuth.instance.currentUser?.uid;
-      if (uid != null) {
-        // Soft-delete: mark as deleted in Firestore, then sign out
-        await FirebaseFirestore.instance.collection('users').doc(uid).update({
-          'deleted': true,
-          'deletedAt': FieldValue.serverTimestamp(),
-        });
-        await _authService.logout();
-        if (mounted) {
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (_) => const LoginScreen()),
-            (_) => false,
-          );
-        }
-      }
-    }
-  }
-
-  Future<void> _launchUrl(String url) async {
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
   }
 
   void _showAboutDialog(LanguageProvider lang) {
@@ -309,7 +327,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: lang.isSwahili
                 ? 'Pata msaada kupitia barua pepe'
                 : 'Get help via email',
-            onTap: () => _launchUrl('mailto:support@zanseafood.com'),
+            onTap: () => _showInfoSheet(
+              lang: lang,
+              icon: Icons.contact_support_outlined,
+              title: lang.isSwahili ? 'Wasiliana Nasi' : 'Contact Us',
+              content: lang.isSwahili
+                  ? 'Tuma barua pepe kwa:\nsupport@zanseafood.com\n\nAu piga simu:\n+255 699 000 000\n\nMasaa ya kazi:\nJumatatu – Ijumaa\n8:00 asubuhi – 6:00 jioni'
+                  : 'Send us an email at:\nsupport@zanseafood.com\n\nOr call us at:\n+255 699 000 000\n\nWorking hours:\nMonday – Friday\n8:00 AM – 6:00 PM',
+            ),
           ),
           _buildNavTile(
             icon: Icons.privacy_tip_outlined,
@@ -317,7 +342,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: lang.isSwahili
                 ? 'Jinsi tunavyotumia data yako'
                 : 'How we handle your data',
-            onTap: () => _launchUrl('https://zanseafood.com/privacy'),
+            onTap: () => _showInfoSheet(
+              lang: lang,
+              icon: Icons.privacy_tip_outlined,
+              title: lang.isSwahili ? 'Sera ya Faragha' : 'Privacy Policy',
+              content: lang.isSwahili
+                  ? '1. Ukusanyaji wa Data\nTunakusanya taarifa unazotoa wakati wa usajili kama vile jina, barua pepe, na nambari ya simu.\n\n2. Matumizi ya Data\nData yako inatumika kutoa huduma za soko, kushughulikia maagizo, na kuboresha uzoefu wako.\n\n3. Usalama\nTunalinda data yako kwa kutumia Firebase na hatua za usalama za kisasa.\n\n4. Kushiriki Data\nHatushirikishi data yako na watu wa nje bila idhini yako, isipokuwa inapohitajika kisheria.\n\n5. Mawasiliano\nKwa maswali yoyote kuhusu faragha, wasiliana nasi kwa support@zanseafood.com'
+                  : '1. Data Collection\nWe collect information you provide during registration such as name, email, and phone number.\n\n2. Use of Data\nYour data is used to provide marketplace services, process orders, and improve your experience.\n\n3. Security\nWe protect your data using Firebase and modern security practices.\n\n4. Data Sharing\nWe do not share your data with third parties without your consent, except where required by law.\n\n5. Contact\nFor any privacy questions, contact us at support@zanseafood.com',
+            ),
           ),
           _buildNavTile(
             icon: Icons.description_outlined,
@@ -325,7 +357,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: lang.isSwahili
                 ? 'Sheria za kutumia programu'
                 : 'Rules for using the app',
-            onTap: () => _launchUrl('https://zanseafood.com/terms'),
+            onTap: () => _showInfoSheet(
+              lang: lang,
+              icon: Icons.description_outlined,
+              title: lang.isSwahili
+                  ? 'Masharti ya Matumizi'
+                  : 'Terms of Service',
+              content: lang.isSwahili
+                  ? '1. Kukubaliana\nKwa kutumia ZanSeaFood, unakubali masharti haya.\n\n2. Akaunti\nUnawajibika kulinda nywila yako. Taarifa za uongo haziruhusiwi.\n\n3. Bidhaa na Maagizo\nWauzaji wanawajibika kwa ubora wa bidhaa. Maagizo yanayokamilika hayarudishwi isipokuwa kwa sababu maalum.\n\n4. Mwenendo\nMatumizi mabaya, udanganyifu, au ukiukaji wa sheria utasababisha kufutwa kwa akaunti.\n\n5. Mabadiliko\nTunaweza kubadilisha masharti haya wakati wowote. Tutakujulisha kupitia programu.\n\n6. Mawasiliano\nsupport@zanseafood.com'
+                  : '1. Acceptance\nBy using ZanSeaFood, you agree to these terms.\n\n2. Account\nYou are responsible for keeping your password secure. False information is not permitted.\n\n3. Products & Orders\nSellers are responsible for product quality. Completed orders are non-refundable except in special cases.\n\n4. Conduct\nMisuse, fraud, or violation of laws will result in account termination.\n\n5. Changes\nWe may update these terms at any time. We will notify you through the app.\n\n6. Contact\nsupport@zanseafood.com',
+            ),
           ),
           _buildNavTile(
             icon: Icons.info_outline,
@@ -350,16 +391,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             iconColor: Colors.red.shade400,
             titleColor: Colors.red.shade400,
             onTap: _logout,
-          ),
-          _buildNavTile(
-            icon: Icons.delete_forever_outlined,
-            title: lang.isSwahili ? 'Futa Akaunti' : 'Delete Account',
-            subtitle: lang.isSwahili
-                ? 'Futa akaunti yako kabisa'
-                : 'Permanently delete your account',
-            iconColor: Colors.red.shade700,
-            titleColor: Colors.red.shade700,
-            onTap: _showDeleteAccountDialog,
           ),
           const SizedBox(height: 32),
         ],
