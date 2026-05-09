@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
 import '../services/notification_service.dart';
-import 'orders_screen.dart';
+import 'customer_dashboard.dart';
 
 class DeliverySelectionScreen extends StatefulWidget {
   final String orderId;
@@ -173,7 +173,9 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
       if (mounted) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const OrdersScreen()),
+          MaterialPageRoute(
+            builder: (_) => const CustomerDashboard(initialIndex: 1),
+          ),
         );
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

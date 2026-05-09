@@ -756,7 +756,7 @@ class _PickupConfirmedScreen extends StatelessWidget {
                   onPressed: () => Navigator.pushAndRemoveUntil(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const CustomerDashboard(),
+                      builder: (_) => const CustomerDashboard(initialIndex: 1),
                     ),
                     (route) => false,
                   ),

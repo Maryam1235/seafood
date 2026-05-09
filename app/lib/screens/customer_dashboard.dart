@@ -13,7 +13,8 @@ import 'delivery_personnel_screen.dart';
 import 'settings_screen.dart';
 
 class CustomerDashboard extends StatefulWidget {
-  const CustomerDashboard({super.key});
+  final int initialIndex;
+  const CustomerDashboard({super.key, this.initialIndex = 0});
   @override
   State<CustomerDashboard> createState() => _CustomerDashboardState();
 }
@@ -35,6 +36,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   @override
   void initState() {
     super.initState();
+    _currentIndex = widget.initialIndex;
     _pages = [
       BrowseSeafoodScreen(onOpenDrawer: _openDrawer), // 0
       OrdersScreen(onOpenDrawer: _openDrawer), // 1

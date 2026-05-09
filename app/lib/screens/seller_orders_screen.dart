@@ -28,38 +28,52 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
 
   Color _statusColor(String s) {
     switch (s) {
-      case 'pending':   return Colors.orange;
-      case 'confirmed': return Colors.blue;
-      case 'delivered': return Colors.green;
-      case 'cancelled': return Colors.red;
-      default:          return Colors.grey;
+      case 'pending':
+        return Colors.orange;
+      case 'confirmed':
+        return Colors.blue;
+      case 'delivered':
+        return Colors.green;
+      case 'cancelled':
+        return Colors.red;
+      default:
+        return Colors.grey;
     }
   }
 
   String _statusText(String s, bool sw) {
     if (sw) {
       switch (s) {
-        case 'pending':   return 'Inasubiri';
-        case 'confirmed': return 'Imethibitishwa';
-        case 'delivered': return 'Imewasilishwa';
-        case 'cancelled': return 'Imeghairiwa';
-        default:          return s;
+        case 'pending':
+          return 'Inasubiri';
+        case 'confirmed':
+          return 'Imethibitishwa';
+        case 'delivered':
+          return 'Imewasilishwa';
+        case 'cancelled':
+          return 'Imeghairiwa';
+        default:
+          return s;
       }
     }
     switch (s) {
-      case 'pending':   return 'Pending';
-      case 'confirmed': return 'Confirmed';
-      case 'delivered': return 'Delivered';
-      case 'cancelled': return 'Cancelled';
-      default:          return s;
+      case 'pending':
+        return 'Pending';
+      case 'confirmed':
+        return 'Confirmed';
+      case 'delivered':
+        return 'Delivered';
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return s;
     }
   }
 
   Future<void> _updateStatus(String orderId, String newStatus) async {
-    await FirebaseFirestore.instance
-        .collection('orders')
-        .doc(orderId)
-        .update({'status': newStatus});
+    await FirebaseFirestore.instance.collection('orders').doc(orderId).update({
+      'status': newStatus,
+    });
   }
 
   @override
@@ -76,7 +90,8 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.menu),
-          onPressed: widget.onOpenDrawer ?? () => Scaffold.of(context).openDrawer(),
+          onPressed:
+              widget.onOpenDrawer ?? () => Scaffold.of(context).openDrawer(),
         ),
       ),
       body: StreamBuilder<QuerySnapshot>(
@@ -89,7 +104,7 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          // Search + filter bar
+          // ── Search + filter bar ──────────────────────────────────
           Widget filterBar = Container(
             color: Colors.white,
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -99,12 +114,25 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
                   controller: _searchController,
                   onChanged: (v) => setState(() => _search = v.toLowerCase()),
                   decoration: InputDecoration(
-                    hintText: lang.isSwahili ? 'Tafuta agizo...' : 'Search orders...',
-                    hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
-                    prefixIcon: const Icon(Icons.search, color: Colors.grey, size: 20),
+                    hintText: lang.isSwahili
+                        ? 'Tafuta agizo...'
+                        : 'Search orders...',
+                    hintStyle: TextStyle(
+                      color: Colors.grey.shade400,
+                      fontSize: 14,
+                    ),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: Colors.grey,
+                      size: 20,
+                    ),
                     suffixIcon: _search.isNotEmpty
                         ? IconButton(
-                            icon: const Icon(Icons.clear, size: 18, color: Colors.grey),
+                            icon: const Icon(
+                              Icons.clear,
+                              size: 18,
+                              color: Colors.grey,
+                            ),
                             onPressed: () {
                               _searchController.clear();
                               setState(() => _search = '');
@@ -139,7 +167,13 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
                         onTap: () => setState(() => _sortBy = 'oldest'),
                       ),
                       const SizedBox(width: 16),
-                      for (final s in ['all', 'pending', 'confirmed', 'delivered', 'cancelled'])
+                      for (final s in [
+                        'all',
+                        'pending',
+                        'confirmed',
+                        'delivered',
+                        'cancelled',
+                      ])
                         Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: _StatusChip(
@@ -160,10 +194,12 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
           );
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Column(children: [
-              filterBar,
-              Expanded(child: _emptyState(lang)),
-            ]);
+            return Column(
+              children: [
+                filterBar,
+                Expanded(child: _emptyState(lang)),
+              ],
+            );
           }
 
           // Filter by seller
@@ -181,43 +217,53 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
             }).toList();
           }
 
-          // Search by order ID or customer item name
+          // Search
           if (_search.isNotEmpty) {
             orders = orders.where((doc) {
               final d = doc.data() as Map<String, dynamic>;
               final idMatch = doc.id.toLowerCase().contains(_search);
               final items = (d['items'] as List?) ?? [];
               final itemMatch = items.any(
-                (i) => (i['name'] ?? '').toString().toLowerCase().contains(_search),
+                (i) => (i['name'] ?? '').toString().toLowerCase().contains(
+                  _search,
+                ),
               );
               return idMatch || itemMatch;
             }).toList();
           }
 
-          // Sort
           if (_sortBy == 'oldest') orders = orders.reversed.toList();
 
           if (orders.isEmpty) {
-            return Column(children: [
-              filterBar,
-              Expanded(
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.search_off, size: 70, color: Colors.grey.shade300),
-                      const SizedBox(height: 12),
-                      Text(
-                        lang.isSwahili
-                            ? 'Hakuna maagizo yanayolingana'
-                            : 'No matching orders',
-                        style: TextStyle(fontSize: 16, color: Colors.grey.shade500),
-                      ),
-                    ],
+            return Column(
+              children: [
+                filterBar,
+                Expanded(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.search_off,
+                          size: 70,
+                          color: Colors.grey.shade300,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          lang.isSwahili
+                              ? 'Hakuna maagizo yanayolingana'
+                              : 'No matching orders',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ]);
+              ],
+            );
           }
 
           return Column(
@@ -236,9 +282,12 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
                         .toList();
                     final status = order['status'] ?? 'pending';
                     final createdAt = order['createdAt'] as Timestamp?;
+                    final fulfillment = order['fulfillment'] ?? 'delivery';
+                    final isPickup = fulfillment == 'pickup';
                     final subtotal = myItems.fold<double>(
                       0,
-                      (acc, i) => acc + ((i['price'] ?? 0) * (i['quantity'] ?? 1)),
+                      (acc, i) =>
+                          acc + ((i['price'] ?? 0) * (i['quantity'] ?? 1)),
                     );
 
                     return Container(
@@ -246,20 +295,32 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
+                        // Highlight pickup orders with a green border
+                        border: isPickup
+                            ? Border.all(
+                                color: Colors.green.withValues(alpha: 0.4),
+                                width: 1.5,
+                              )
+                            : null,
                         boxShadow: [
                           BoxShadow(color: Colors.grey.shade200, blurRadius: 6),
                         ],
                       ),
                       child: Column(
                         children: [
-                          // Header
+                          // ── Header ──────────────────────────────
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 12),
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
                             decoration: BoxDecoration(
-                              color: _navy.withValues(alpha: 0.04),
+                              color: isPickup
+                                  ? Colors.green.withValues(alpha: 0.05)
+                                  : _navy.withValues(alpha: 0.04),
                               borderRadius: const BorderRadius.vertical(
-                                  top: Radius.circular(16)),
+                                top: Radius.circular(16),
+                              ),
                             ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -270,216 +331,438 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
                                     Text(
                                       '${lang.isSwahili ? 'Agizo' : 'Order'} #${doc.id.substring(0, 6).toUpperCase()}',
                                       style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
                                     ),
                                     if (createdAt != null)
                                       Text(
                                         '${createdAt.toDate().day}/${createdAt.toDate().month}/${createdAt.toDate().year}',
                                         style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey.shade500),
+                                          fontSize: 12,
+                                          color: Colors.grey.shade500,
+                                        ),
                                       ),
                                   ],
                                 ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 5),
-                                  decoration: BoxDecoration(
-                                    color: _statusColor(status)
-                                        .withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text(
-                                    _statusText(status, lang.isSwahili),
-                                    style: TextStyle(
-                                      color: _statusColor(status),
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
+                                Row(
+                                  children: [
+                                    // Fulfillment badge
+                                    Container(
+                                      margin: const EdgeInsets.only(right: 8),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isPickup
+                                            ? Colors.green.withValues(
+                                                alpha: 0.12,
+                                              )
+                                            : Colors.blue.withValues(
+                                                alpha: 0.1,
+                                              ),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            isPickup
+                                                ? Icons.storefront_outlined
+                                                : Icons.delivery_dining,
+                                            size: 12,
+                                            color: isPickup
+                                                ? Colors.green.shade700
+                                                : Colors.blue.shade700,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            isPickup
+                                                ? (lang.isSwahili
+                                                      ? 'Kuchukua'
+                                                      : 'Pickup')
+                                                : (lang.isSwahili
+                                                      ? 'Utoaji'
+                                                      : 'Delivery'),
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                              color: isPickup
+                                                  ? Colors.green.shade700
+                                                  : Colors.blue.shade700,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
+                                    // Status badge
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 5,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: _statusColor(
+                                          status,
+                                        ).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        _statusText(status, lang.isSwahili),
+                                        style: TextStyle(
+                                          color: _statusColor(status),
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
                           ),
 
-                          // Customer info
-                          FutureBuilder<DocumentSnapshot>(
-                            future: FirebaseFirestore.instance
-                                .collection('users')
-                                .doc(order['customerId'])
-                                .get(),
-                            builder: (context, snap) {
-                              final customer =
-                                  snap.data?.data() as Map<String, dynamic>?;
-                              return Padding(
-                                padding:
-                                    const EdgeInsets.fromLTRB(16, 10, 16, 0),
-                                child: Row(children: [
-                                  Icon(Icons.person_outline,
-                                      size: 16, color: Colors.grey.shade500),
-                                  const SizedBox(width: 6),
-                                  Text(
+                          // ── Pickup info banner ───────────────────
+                          if (isPickup)
+                            FutureBuilder<DocumentSnapshot>(
+                              future: FirebaseFirestore.instance
+                                  .collection('users')
+                                  .doc(order['customerId'])
+                                  .get(),
+                              builder: (context, snap) {
+                                final customer =
+                                    snap.data?.data() as Map<String, dynamic>?;
+                                final customerName =
                                     customer?['fullName'] ??
-                                        customer?['username'] ??
-                                        (lang.isSwahili ? 'Mteja' : 'Customer'),
-                                    style: TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.grey.shade600,
-                                        fontWeight: FontWeight.w500),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Icon(Icons.phone_outlined,
-                                      size: 16, color: Colors.grey.shade500),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    customer?['phone'] ?? 'N/A',
-                                    style: TextStyle(
-                                        fontSize: 13,
-                                        color: Colors.grey.shade600),
-                                  ),
-                                ]),
-                              );
-                            },
-                          ),
+                                    customer?['username'] ??
+                                    '';
+                                final customerPhone = customer?['phone'] ?? '';
+                                final customerLocation =
+                                    customer?['location']?['name'] ?? '';
 
-                          // Items
-                          ...myItems.map(
-                            (item) => Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 8),
-                              child: Row(children: [
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: item['imageUrl'] != null
-                                      ? Image.network(item['imageUrl'],
-                                          width: 52,
-                                          height: 52,
-                                          fit: BoxFit.cover)
-                                      : Container(
-                                          width: 52,
-                                          height: 52,
-                                          color: Colors.grey.shade100,
-                                          child: Icon(Icons.set_meal,
-                                              color: Colors.grey.shade300)),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
+                                return Container(
+                                  margin: const EdgeInsets.fromLTRB(
+                                    12,
+                                    10,
+                                    12,
+                                    0,
+                                  ),
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.shade50,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: Colors.green.shade200,
+                                    ),
+                                  ),
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Text(item['name'] ?? '',
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 14)),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.storefront,
+                                            size: 15,
+                                            color: Colors.green.shade700,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Text(
+                                            lang.isSwahili
+                                                ? 'Mteja atakuja kuchukua'
+                                                : 'Customer will pick up',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.green.shade800,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      if (customerName.isNotEmpty)
+                                        _infoRow(
+                                          Icons.person_outline,
+                                          customerName,
+                                          Colors.green.shade700,
+                                        ),
+                                      if (customerPhone.isNotEmpty) ...[
+                                        const SizedBox(height: 4),
+                                        _infoRow(
+                                          Icons.phone_outlined,
+                                          customerPhone,
+                                          Colors.green.shade700,
+                                        ),
+                                      ],
+                                      if (customerLocation.isNotEmpty) ...[
+                                        const SizedBox(height: 4),
+                                        _infoRow(
+                                          Icons.location_on_outlined,
+                                          customerLocation,
+                                          Colors.green.shade700,
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                );
+                              },
+                            )
+                          else
+                            // ── Delivery: customer info row ──────
+                            FutureBuilder<DocumentSnapshot>(
+                              future: FirebaseFirestore.instance
+                                  .collection('users')
+                                  .doc(order['customerId'])
+                                  .get(),
+                              builder: (context, snap) {
+                                final customer =
+                                    snap.data?.data() as Map<String, dynamic>?;
+                                return Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    16,
+                                    10,
+                                    16,
+                                    0,
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.person_outline,
+                                        size: 16,
+                                        color: Colors.grey.shade500,
+                                      ),
+                                      const SizedBox(width: 6),
                                       Text(
-                                        'TShs ${item['price']?.toStringAsFixed(0)} / ${item['unit']}',
+                                        customer?['fullName'] ??
+                                            customer?['username'] ??
+                                            (lang.isSwahili
+                                                ? 'Mteja'
+                                                : 'Customer'),
                                         style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey.shade500),
+                                          fontSize: 13,
+                                          color: Colors.grey.shade600,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Icon(
+                                        Icons.phone_outlined,
+                                        size: 16,
+                                        color: Colors.grey.shade500,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        customer?['phone'] ?? 'N/A',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          color: Colors.grey.shade600,
+                                        ),
                                       ),
                                     ],
                                   ),
-                                ),
-                                Text('x${item['quantity']}',
+                                );
+                              },
+                            ),
+
+                          // ── Items ────────────────────────────────
+                          ...myItems.map(
+                            (item) => Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                              child: Row(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: item['imageUrl'] != null
+                                        ? Image.network(
+                                            item['imageUrl'],
+                                            width: 52,
+                                            height: 52,
+                                            fit: BoxFit.cover,
+                                          )
+                                        : Container(
+                                            width: 52,
+                                            height: 52,
+                                            color: Colors.grey.shade100,
+                                            child: Icon(
+                                              Icons.set_meal,
+                                              color: Colors.grey.shade300,
+                                            ),
+                                          ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          item['name'] ?? '',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        Text(
+                                          'TShs ${item['price']?.toStringAsFixed(0)} / ${item['unit']}',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey.shade500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Text(
+                                    'x${item['quantity']}',
                                     style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14)),
-                              ]),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
 
-                          // Subtotal + action buttons
+                          // ── Subtotal + action buttons ─────────────
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
                               border: Border(
-                                  top: BorderSide(
-                                      color: Colors.grey.shade100)),
+                                top: BorderSide(color: Colors.grey.shade100),
+                              ),
                             ),
-                            child: Column(children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    lang.isSwahili ? 'Jumla' : 'Subtotal',
-                                    style: TextStyle(
-                                        color: Colors.grey.shade600),
-                                  ),
-                                  Text(
-                                    'TShs ${subtotal.toStringAsFixed(0)}',
-                                    style: const TextStyle(
+                            child: Column(
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      lang.isSwahili ? 'Jumla' : 'Subtotal',
+                                      style: TextStyle(
+                                        color: Colors.grey.shade600,
+                                      ),
+                                    ),
+                                    Text(
+                                      'TShs ${subtotal.toStringAsFixed(0)}',
+                                      style: const TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        color: _navy),
+                                        color: _navy,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                // Pending: Reject / Confirm
+                                if (status == 'pending') ...[
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: OutlinedButton(
+                                          onPressed: () => _updateStatus(
+                                            doc.id,
+                                            'cancelled',
+                                          ),
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor: Colors.red,
+                                            side: const BorderSide(
+                                              color: Colors.red,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            lang.isSwahili ? 'Kataa' : 'Reject',
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: ElevatedButton(
+                                          onPressed: () => _updateStatus(
+                                            doc.id,
+                                            'confirmed',
+                                          ),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: _navy,
+                                            foregroundColor: Colors.white,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                            ),
+                                            elevation: 0,
+                                          ),
+                                          child: Text(
+                                            lang.isSwahili
+                                                ? 'Thibitisha'
+                                                : 'Confirm',
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
-                              ),
-                              if (status == 'pending') ...[
-                                const SizedBox(height: 12),
-                                Row(children: [
-                                  Expanded(
-                                    child: OutlinedButton(
+
+                                // Confirmed: different label for pickup vs delivery
+                                if (status == 'confirmed') ...[
+                                  const SizedBox(height: 12),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton.icon(
                                       onPressed: () =>
-                                          _updateStatus(doc.id, 'cancelled'),
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: Colors.red,
-                                        side: const BorderSide(
-                                            color: Colors.red),
-                                        shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(10)),
+                                          _updateStatus(doc.id, 'delivered'),
+                                      icon: Icon(
+                                        isPickup
+                                            ? Icons.storefront_outlined
+                                            : Icons.local_shipping_outlined,
                                       ),
-                                      child: Text(lang.isSwahili
-                                          ? 'Kataa'
-                                          : 'Reject'),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: ElevatedButton(
-                                      onPressed: () =>
-                                          _updateStatus(doc.id, 'confirmed'),
+                                      label: Text(
+                                        isPickup
+                                            ? (lang.isSwahili
+                                                  ? 'Imechukuliwa — Kamilisha'
+                                                  : 'Collected — Mark Complete')
+                                            : (lang.isSwahili
+                                                  ? 'Imekamilika'
+                                                  : 'Mark as Delivered'),
+                                      ),
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: _navy,
+                                        backgroundColor: isPickup
+                                            ? Colors.green.shade700
+                                            : Colors.green,
                                         foregroundColor: Colors.white,
                                         shape: RoundedRectangleBorder(
-                                            borderRadius:
-                                                BorderRadius.circular(10)),
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
                                         elevation: 0,
                                       ),
-                                      child: Text(lang.isSwahili
-                                          ? 'Thibitisha'
-                                          : 'Confirm'),
                                     ),
                                   ),
-                                ]),
-                              ],
-                              if (status == 'confirmed') ...[
-                                const SizedBox(height: 12),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: ElevatedButton.icon(
-                                    onPressed: () =>
-                                        _updateStatus(doc.id, 'delivered'),
-                                    icon: const Icon(
-                                        Icons.local_shipping_outlined),
-                                    label: Text(lang.isSwahili
-                                        ? 'Imekamilika'
-                                        : 'Mark as Delivered'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.green,
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(10)),
-                                      elevation: 0,
+                                  if (isPickup) ...[
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      lang.isSwahili
+                                          ? 'Bonyeza baada ya mteja kuchukua bidhaa'
+                                          : 'Tap after the customer collects their items',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey.shade500,
+                                      ),
+                                      textAlign: TextAlign.center,
                                     ),
-                                  ),
-                                ),
+                                  ],
+                                ],
                               ],
-                            ]),
+                            ),
                           ),
                         ],
                       ),
@@ -494,13 +777,37 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
     );
   }
 
+  Widget _infoRow(IconData icon, String text, Color color) {
+    return Row(
+      children: [
+        Icon(icon, size: 13, color: color),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              color: color,
+              fontWeight: FontWeight.w500,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _emptyState(LanguageProvider lang) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.receipt_long_outlined,
-              size: 90, color: Colors.grey.shade300),
+          Icon(
+            Icons.receipt_long_outlined,
+            size: 90,
+            color: Colors.grey.shade300,
+          ),
           const SizedBox(height: 16),
           Text(
             lang.isSwahili ? 'Hakuna maagizo bado' : 'No orders yet',
@@ -512,6 +819,7 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
   }
 }
 
+// ── Sort chip ──────────────────────────────────────────────────────────────
 class _SortChip extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -535,15 +843,16 @@ class _SortChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected ? navy : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-              color: selected ? navy : Colors.grey.shade300),
+          border: Border.all(color: selected ? navy : Colors.grey.shade300),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon,
-                size: 13,
-                color: selected ? Colors.white : Colors.grey.shade600),
+            Icon(
+              icon,
+              size: 13,
+              color: selected ? Colors.white : Colors.grey.shade600,
+            ),
             const SizedBox(width: 4),
             Text(
               label,
@@ -560,6 +869,7 @@ class _SortChip extends StatelessWidget {
   }
 }
 
+// ── Status chip ────────────────────────────────────────────────────────────
 class _StatusChip extends StatelessWidget {
   final String label;
   final Color color;
@@ -582,8 +892,7 @@ class _StatusChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected ? color : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-              color: selected ? color : Colors.grey.shade300),
+          border: Border.all(color: selected ? color : Colors.grey.shade300),
         ),
         child: Text(
           label,
