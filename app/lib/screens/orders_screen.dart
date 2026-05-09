@@ -313,173 +313,257 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     final order = doc.data() as Map<String, dynamic>;
                     final items = (order['items'] as List?) ?? [];
                     final total = order['total'] ?? 0;
+                    final grandTotal = order['grandTotal'] ?? total;
                     final status = order['status'] ?? 'pending';
                     final createdAt = order['createdAt'] as Timestamp?;
+                    final fulfillment = order['fulfillment'] ?? 'delivery';
 
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 14),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(color: Colors.grey.shade200, blurRadius: 6),
-                        ],
-                      ),
-                      child: Column(
-                        children: [
-                          // Header
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
+                    return GestureDetector(
+                      onTap: () =>
+                          _showOrderDetail(context, doc.id, order, lang),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.shade200,
+                              blurRadius: 6,
                             ),
-                            decoration: BoxDecoration(
-                              color: _navy.withValues(alpha: 0.04),
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(16),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            // Header
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
                               ),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '${lang.isSwahili ? 'Agizo' : 'Order'} #${doc.id.substring(0, 6).toUpperCase()}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    if (createdAt != null)
+                              decoration: BoxDecoration(
+                                color: _navy.withValues(alpha: 0.04),
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(16),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
                                       Text(
-                                        '${createdAt.toDate().day}/${createdAt.toDate().month}/${createdAt.toDate().year}',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey.shade500,
+                                        '${lang.isSwahili ? 'Agizo' : 'Order'} #${doc.id.substring(0, 6).toUpperCase()}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
                                         ),
                                       ),
-                                  ],
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 5,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: _statusColor(
-                                      status,
-                                    ).withValues(alpha: 0.1),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text(
-                                    _statusLabel(status, lang.isSwahili),
-                                    style: TextStyle(
-                                      color: _statusColor(status),
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          // Items preview
-                          ...items
-                              .take(2)
-                              .map(
-                                (item) => Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 8,
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: item['imageUrl'] != null
-                                            ? Image.network(
-                                                item['imageUrl'],
-                                                width: 48,
-                                                height: 48,
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (_, __, ___) =>
-                                                    _imgPlaceholder(),
-                                              )
-                                            : _imgPlaceholder(),
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: Text(
-                                          item['name'] ?? '',
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w500,
+                                      if (createdAt != null)
+                                        Text(
+                                          '${createdAt.toDate().day}/${createdAt.toDate().month}/${createdAt.toDate().year}',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey.shade500,
                                           ),
                                         ),
+                                    ],
+                                  ),
+                                  Row(
+                                    children: [
+                                      // Fulfillment badge
+                                      Container(
+                                        margin: const EdgeInsets.only(right: 8),
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: fulfillment == 'pickup'
+                                              ? Colors.green.withValues(
+                                                  alpha: 0.1,
+                                                )
+                                              : Colors.blue.withValues(
+                                                  alpha: 0.1,
+                                                ),
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                        ),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              fulfillment == 'pickup'
+                                                  ? Icons.storefront_outlined
+                                                  : Icons.delivery_dining,
+                                              size: 11,
+                                              color: fulfillment == 'pickup'
+                                                  ? Colors.green.shade700
+                                                  : Colors.blue.shade700,
+                                            ),
+                                            const SizedBox(width: 3),
+                                            Text(
+                                              fulfillment == 'pickup'
+                                                  ? (lang.isSwahili
+                                                        ? 'Kuchukua'
+                                                        : 'Pickup')
+                                                  : (lang.isSwahili
+                                                        ? 'Utoaji'
+                                                        : 'Delivery'),
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                                color: fulfillment == 'pickup'
+                                                    ? Colors.green.shade700
+                                                    : Colors.blue.shade700,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                      Text(
-                                        'x${item['quantity']}',
-                                        style: TextStyle(
-                                          color: Colors.grey.shade500,
-                                          fontSize: 13,
+                                      // Status badge
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 12,
+                                          vertical: 5,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: _statusColor(
+                                            status,
+                                          ).withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          _statusLabel(status, lang.isSwahili),
+                                          style: TextStyle(
+                                            color: _statusColor(status),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12,
+                                          ),
                                         ),
                                       ),
                                     ],
                                   ),
+                                ],
+                              ),
+                            ),
+                            // Items preview
+                            ...items
+                                .take(2)
+                                .map(
+                                  (item) => Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          child: item['imageUrl'] != null
+                                              ? Image.network(
+                                                  item['imageUrl'],
+                                                  width: 48,
+                                                  height: 48,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (_, __, ___) =>
+                                                      _imgPlaceholder(),
+                                                )
+                                              : _imgPlaceholder(),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: Text(
+                                            item['name'] ?? '',
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                        Text(
+                                          'x${item['quantity']}',
+                                          style: TextStyle(
+                                            color: Colors.grey.shade500,
+                                            fontSize: 13,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
-                              ),
-                          if (items.length > 2)
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                left: 16,
-                                bottom: 4,
-                              ),
-                              child: Align(
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  '+${items.length - 2} ${lang.isSwahili ? 'bidhaa zaidi' : 'more items'}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade500,
+                            if (items.length > 2)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  left: 16,
+                                  bottom: 4,
+                                ),
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    '+${items.length - 2} ${lang.isSwahili ? 'bidhaa zaidi' : 'more items'}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade500,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          // Total
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            decoration: BoxDecoration(
-                              border: Border(
-                                top: BorderSide(color: Colors.grey.shade100),
+                            // Total + tap hint
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  top: BorderSide(color: Colors.grey.shade100),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.touch_app_outlined,
+                                        size: 14,
+                                        color: Colors.grey.shade400,
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        lang.isSwahili
+                                            ? 'Gusa kwa maelezo'
+                                            : 'Tap for details',
+                                        style: TextStyle(
+                                          color: Colors.grey.shade400,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Text(
+                                    'TShs ${(grandTotal as num).toStringAsFixed(0)}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                      color: _navy,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  lang.isSwahili ? 'Jumla' : 'Total',
-                                  style: TextStyle(
-                                    color: Colors.grey.shade600,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                Text(
-                                  'TShs ${total.toStringAsFixed(0)}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
-                                    color: _navy,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     );
                   },
@@ -489,6 +573,21 @@ class _OrdersScreenState extends State<OrdersScreen> {
           );
         },
       ),
+    );
+  }
+
+  void _showOrderDetail(
+    BuildContext context,
+    String orderId,
+    Map<String, dynamic> order,
+    LanguageProvider lang,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) =>
+          _OrderDetailSheet(orderId: orderId, order: order, lang: lang),
     );
   }
 
@@ -583,6 +682,770 @@ class _FilterChip extends StatelessWidget {
             color: selected ? Colors.white : Colors.grey.shade700,
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Order detail + payment sheet ──────────────────────────────────────────────
+class _OrderDetailSheet extends StatelessWidget {
+  final String orderId;
+  final Map<String, dynamic> order;
+  final LanguageProvider lang;
+
+  const _OrderDetailSheet({
+    required this.orderId,
+    required this.order,
+    required this.lang,
+  });
+
+  static const _navy = Color(0xFF3730A3);
+
+  Color _statusColor(String s) {
+    switch (s) {
+      case 'pending':
+        return Colors.orange;
+      case 'confirmed':
+        return Colors.blue;
+      case 'delivered':
+        return Colors.green;
+      case 'cancelled':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _statusLabel(String s) {
+    if (lang.isSwahili) {
+      switch (s) {
+        case 'pending':
+          return 'Inasubiri';
+        case 'confirmed':
+          return 'Imethibitishwa';
+        case 'delivered':
+          return 'Imewasilishwa';
+        case 'cancelled':
+          return 'Imeghairiwa';
+        default:
+          return s;
+      }
+    }
+    switch (s) {
+      case 'pending':
+        return 'Pending';
+      case 'confirmed':
+        return 'Confirmed';
+      case 'delivered':
+        return 'Delivered';
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return s;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final items = (order['items'] as List?) ?? [];
+    final total = (order['total'] ?? 0) as num;
+    final grandTotal = (order['grandTotal'] ?? total) as num;
+    final deliveryCost = grandTotal - total;
+    final status = order['status'] ?? 'pending';
+    final fulfillment = order['fulfillment'] ?? 'delivery';
+    final createdAt = order['createdAt'] as Timestamp?;
+    final delivery = order['delivery'] as Map<String, dynamic>?;
+
+    // Collect unique seller IDs from items
+    final sellerIds = items
+        .map((i) => i['sellerId'] as String?)
+        .whereType<String>()
+        .toSet()
+        .toList();
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.88,
+      maxChildSize: 0.96,
+      minChildSize: 0.5,
+      builder: (_, controller) => Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFFF5F6FA),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          children: [
+            // Handle + header
+            Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+              child: Column(
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${lang.isSwahili ? 'Agizo' : 'Order'} #${orderId.substring(0, 6).toUpperCase()}',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF111827),
+                            ),
+                          ),
+                          if (createdAt != null)
+                            Text(
+                              '${createdAt.toDate().day}/${createdAt.toDate().month}/${createdAt.toDate().year}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade500,
+                              ),
+                            ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _statusColor(status).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          _statusLabel(status),
+                          style: TextStyle(
+                            color: _statusColor(status),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            Expanded(
+              child: ListView(
+                controller: controller,
+                padding: const EdgeInsets.all(16),
+                children: [
+                  // ── Items ──────────────────────────────────────────
+                  _sectionTitle(lang.isSwahili ? 'Bidhaa' : 'Items'),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(color: Colors.grey.shade200, blurRadius: 6),
+                      ],
+                    ),
+                    child: Column(
+                      children: items.asMap().entries.map((e) {
+                        final i = e.key;
+                        final item = e.value as Map<String, dynamic>;
+                        final subtotal =
+                            (item['price'] ?? 0) * (item['quantity'] ?? 1);
+                        return Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(14),
+                              child: Row(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: item['imageUrl'] != null
+                                        ? Image.network(
+                                            item['imageUrl'],
+                                            width: 52,
+                                            height: 52,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) =>
+                                                _imgBox(),
+                                          )
+                                        : _imgBox(),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          item['name'] ?? '',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        Text(
+                                          'TShs ${(item['price'] ?? 0).toStringAsFixed(0)} / ${item['unit'] ?? ''}',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey.shade500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        'x${item['quantity']}',
+                                        style: TextStyle(
+                                          color: Colors.grey.shade500,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                      Text(
+                                        'TShs ${subtotal.toStringAsFixed(0)}',
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                          color: _navy,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (i < items.length - 1)
+                              Divider(height: 1, color: Colors.grey.shade100),
+                          ],
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ── Order summary ──────────────────────────────────
+                  _sectionTitle(lang.isSwahili ? 'Muhtasari' : 'Summary'),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(color: Colors.grey.shade200, blurRadius: 6),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        _summaryRow(
+                          lang.isSwahili ? 'Jumla ya Bidhaa' : 'Items Subtotal',
+                          'TShs ${total.toStringAsFixed(0)}',
+                        ),
+                        if (fulfillment == 'delivery' && deliveryCost > 0) ...[
+                          const SizedBox(height: 8),
+                          _summaryRow(
+                            lang.isSwahili ? 'Ada ya Utoaji' : 'Delivery Fee',
+                            'TShs ${deliveryCost.toStringAsFixed(0)}',
+                          ),
+                        ],
+                        if (fulfillment == 'pickup') ...[
+                          const SizedBox(height: 8),
+                          _summaryRow(
+                            lang.isSwahili ? 'Ada ya Utoaji' : 'Delivery Fee',
+                            lang.isSwahili ? 'Bila ada' : 'Free',
+                            valueColor: Colors.green.shade700,
+                          ),
+                        ],
+                        const Divider(height: 20),
+                        _summaryRow(
+                          lang.isSwahili ? 'Jumla Yote' : 'Grand Total',
+                          'TShs ${grandTotal.toStringAsFixed(0)}',
+                          bold: true,
+                        ),
+                        const SizedBox(height: 10),
+                        // Fulfillment type
+                        Row(
+                          children: [
+                            Icon(
+                              fulfillment == 'pickup'
+                                  ? Icons.storefront_outlined
+                                  : Icons.delivery_dining,
+                              size: 15,
+                              color: fulfillment == 'pickup'
+                                  ? Colors.green.shade700
+                                  : Colors.blue.shade700,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              fulfillment == 'pickup'
+                                  ? (lang.isSwahili
+                                        ? 'Kuja Kuchukua — Bila ada ya utoaji'
+                                        : 'Pick Up — No delivery fee')
+                                  : (lang.isSwahili
+                                        ? 'Utoaji — Dereva: ${delivery?['driverName'] ?? 'N/A'}'
+                                        : 'Delivery — Driver: ${delivery?['driverName'] ?? 'N/A'}'),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: fulfillment == 'pickup'
+                                    ? Colors.green.shade700
+                                    : Colors.blue.shade700,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ── Payment instructions ───────────────────────────
+                  _sectionTitle(
+                    lang.isSwahili
+                        ? 'Maelekezo ya Malipo'
+                        : 'Payment Instructions',
+                  ),
+                  // Fetch each seller's payment info
+                  ...sellerIds.map(
+                    (sellerId) => _SellerPaymentCard(
+                      sellerId: sellerId,
+                      lang: lang,
+                      amountForSeller: items
+                          .where((i) => i['sellerId'] == sellerId)
+                          .fold<double>(
+                            0,
+                            (acc, i) =>
+                                acc +
+                                ((i['price'] ?? 0) * (i['quantity'] ?? 1)),
+                          ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Payment note
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.amber.shade200),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          color: Colors.amber.shade700,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            lang.isSwahili
+                                ? 'Tuma pesa kwa muuzaji kupitia nambari ya simu iliyoonyeshwa. Tumia jina la agizo kama kumbukumbu ya malipo.'
+                                : 'Send payment to the seller via the mobile number shown above. Use the order number as your payment reference.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.amber.shade900,
+                              height: 1.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _sectionTitle(String title) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(
+      title,
+      style: TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.bold,
+        color: Colors.grey.shade600,
+        letterSpacing: 0.5,
+      ),
+    ),
+  );
+
+  Widget _summaryRow(
+    String label,
+    String value, {
+    bool bold = false,
+    Color? valueColor,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: bold ? 15 : 13,
+            fontWeight: bold ? FontWeight.bold : FontWeight.normal,
+            color: bold ? const Color(0xFF111827) : Colors.grey.shade600,
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: bold ? 16 : 13,
+            fontWeight: FontWeight.bold,
+            color: valueColor ?? (bold ? _navy : const Color(0xFF111827)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _imgBox() => Container(
+    width: 52,
+    height: 52,
+    color: Colors.grey.shade100,
+    child: Icon(Icons.set_meal, color: Colors.grey.shade300, size: 24),
+  );
+}
+
+// ── Seller payment card ───────────────────────────────────────────────────────
+class _SellerPaymentCard extends StatelessWidget {
+  final String sellerId;
+  final LanguageProvider lang;
+  final double amountForSeller;
+
+  const _SellerPaymentCard({
+    required this.sellerId,
+    required this.lang,
+    required this.amountForSeller,
+  });
+
+  static const _navy = Color(0xFF3730A3);
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<DocumentSnapshot>(
+      future: FirebaseFirestore.instance
+          .collection('users')
+          .doc(sellerId)
+          .get(),
+      builder: (context, snap) {
+        if (!snap.hasData) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+          );
+        }
+        final seller = snap.data!.data() as Map<String, dynamic>?;
+        if (seller == null) return const SizedBox();
+
+        final name = seller['fullName'] ?? seller['username'] ?? 'Seller';
+        final phone = seller['phone'] ?? '';
+        final mobilePayment = seller['mobilePayment'] ?? '';
+        final location = seller['location']?['name'] ?? '';
+        final initial = name.isNotEmpty ? name[0].toUpperCase() : 'S';
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: _navy.withValues(alpha: 0.15)),
+            boxShadow: [BoxShadow(color: Colors.grey.shade200, blurRadius: 6)],
+          ),
+          child: Column(
+            children: [
+              // Seller header
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: _navy.withValues(alpha: 0.04),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(14),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 22,
+                      backgroundColor: _navy.withValues(alpha: 0.12),
+                      child: Text(
+                        initial,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: _navy,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            name,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              color: Color(0xFF111827),
+                            ),
+                          ),
+                          if (location.isNotEmpty)
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.location_on_outlined,
+                                  size: 12,
+                                  color: Colors.grey.shade500,
+                                ),
+                                const SizedBox(width: 3),
+                                Expanded(
+                                  child: Text(
+                                    location,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.grey.shade500,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                    ),
+                    // Amount due to this seller
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          lang.isSwahili ? 'Lipa' : 'Pay',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                        Text(
+                          'TShs ${amountForSeller.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                            color: _navy,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Payment details
+              Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      lang.isSwahili ? 'Njia za Malipo' : 'Payment Methods',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    // Phone (M-Pesa / Airtel fallback)
+                    if (phone.isNotEmpty)
+                      _paymentRow(
+                        icon: Icons.phone_android,
+                        network: lang.isSwahili
+                            ? 'Simu ya Muuzaji'
+                            : 'Seller Phone',
+                        number: phone,
+                        accountName: name,
+                        color: Colors.blue.shade700,
+                        context: context,
+                      ),
+
+                    // Dedicated mobile payment number
+                    if (mobilePayment.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      _paymentRow(
+                        icon: Icons.mobile_friendly,
+                        network: lang.isSwahili
+                            ? 'Nambari ya Malipo (M-Pesa / Airtel)'
+                            : 'Mobile Money (M-Pesa / Airtel)',
+                        number: mobilePayment,
+                        accountName: name,
+                        color: Colors.green.shade700,
+                        context: context,
+                        highlight: true,
+                      ),
+                    ],
+
+                    if (phone.isEmpty && mobilePayment.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.orange.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.warning_amber_outlined,
+                              color: Colors.orange.shade700,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                lang.isSwahili
+                                    ? 'Muuzaji hajaweka nambari ya malipo. Wasiliana naye moja kwa moja.'
+                                    : 'Seller has not set a payment number. Contact them directly.',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.orange.shade800,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _paymentRow({
+    required IconData icon,
+    required String network,
+    required String number,
+    required String accountName,
+    required Color color,
+    required BuildContext context,
+    bool highlight = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: highlight ? color.withValues(alpha: 0.06) : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: highlight
+              ? color.withValues(alpha: 0.3)
+              : Colors.grey.shade200,
+          width: highlight ? 1.5 : 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  network,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade500,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  number,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                Text(
+                  accountName,
+                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                ),
+              ],
+            ),
+          ),
+          // Copy button
+          GestureDetector(
+            onTap: () {
+              // Copy to clipboard feedback
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    lang.isSwahili
+                        ? 'Nambari imenakiliwa: $number'
+                        : 'Number copied: $number',
+                  ),
+                  duration: const Duration(seconds: 2),
+                  backgroundColor: color,
+                ),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.copy, size: 14, color: color),
+                  const SizedBox(width: 4),
+                  Text(
+                    lang.isSwahili ? 'Nakili' : 'Copy',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

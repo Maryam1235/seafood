@@ -22,6 +22,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late TextEditingController _fullNameController;
   late TextEditingController _usernameController;
   late TextEditingController _phoneController;
+  late TextEditingController _mobilePaymentController;
   bool _isLoading = false;
 
   @override
@@ -36,6 +37,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _phoneController = TextEditingController(
       text: widget.userData['phone'] ?? '',
     );
+    _mobilePaymentController = TextEditingController(
+      text: widget.userData['mobilePayment'] ?? '',
+    );
   }
 
   Future<void> _save() async {
@@ -47,6 +51,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'fullName': _fullNameController.text.trim(),
         'username': _usernameController.text.trim(),
         'phone': _phoneController.text.trim(),
+        'mobilePayment': _mobilePaymentController.text.trim(),
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -136,6 +141,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 validator: (v) => v?.isEmpty ?? true ? 'Required' : null,
               ),
               const SizedBox(height: 16),
+              // Mobile payment number
+              TextFormField(
+                controller: _mobilePaymentController,
+                decoration:
+                    _dec(
+                      lang.isSwahili
+                          ? 'Nambari ya Malipo (M-Pesa / Airtel)'
+                          : 'Mobile Payment Number (M-Pesa / Airtel)',
+                      Icons.mobile_friendly,
+                    ).copyWith(
+                      helperText: lang.isSwahili
+                          ? 'Wateja watatumia nambari hii kukutumia pesa'
+                          : 'Customers will use this number to send you payment',
+                      helperStyle: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                keyboardType: TextInputType.phone,
+              ),
+              const SizedBox(height: 16),
               // Email - read only
               TextFormField(
                 initialValue: widget.userData['email'] ?? '',
@@ -187,6 +213,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _fullNameController.dispose();
     _usernameController.dispose();
     _phoneController.dispose();
+    _mobilePaymentController.dispose();
     super.dispose();
   }
 }

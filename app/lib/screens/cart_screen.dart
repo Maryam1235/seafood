@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
 import '../services/cart_service.dart';
 import 'delivery_selection_screen.dart';
+import 'customer_dashboard.dart';
 
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
@@ -64,8 +65,8 @@ class CartScreen extends StatelessWidget {
               .toList();
           final total = items.fold<double>(
             0,
-            (sum, item) =>
-                sum + ((item['price'] ?? 0) * (item['quantity'] ?? 1)),
+            (acc, item) =>
+                acc + ((item['price'] ?? 0) * (item['quantity'] ?? 1)),
           );
 
           return Column(
@@ -133,7 +134,6 @@ class CartScreen extends StatelessWidget {
                                     ),
                                   ),
                                   const SizedBox(height: 8),
-                                  // Quantity controls
                                   Row(
                                     children: [
                                       _qtyBtn(
@@ -322,9 +322,11 @@ class CartScreen extends StatelessWidget {
     LanguageProvider lang,
     CartService cartService,
   ) async {
+    // Step 1 — confirm order
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(lang.isSwahili ? 'Thibitisha Agizo' : 'Confirm Order'),
         content: Text(
           lang.isSwahili
@@ -348,17 +350,437 @@ class CartScreen extends StatelessWidget {
       ),
     );
 
-    if (confirm == true) {
-      final orderId = await cartService.placeOrder(items, total);
-      if (context.mounted) {
+    if (confirm != true || !context.mounted) return;
+
+    // Step 2 — place order in Firestore
+    final orderId = await cartService.placeOrder(items, total);
+
+    if (!context.mounted) return;
+
+    // Step 3 — ask: Delivery or Pickup?
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isDismissible: false,
+      enableDrag: false,
+      isScrollControlled: true,
+      builder: (sheetCtx) =>
+          _FulfillmentSheet(orderId: orderId, orderTotal: total, lang: lang),
+    );
+  }
+}
+
+// ── Fulfillment choice bottom sheet ──────────────────────────────────────────
+class _FulfillmentSheet extends StatefulWidget {
+  final String orderId;
+  final double orderTotal;
+  final LanguageProvider lang;
+
+  const _FulfillmentSheet({
+    required this.orderId,
+    required this.orderTotal,
+    required this.lang,
+  });
+
+  @override
+  State<_FulfillmentSheet> createState() => _FulfillmentSheetState();
+}
+
+class _FulfillmentSheetState extends State<_FulfillmentSheet> {
+  static const _navy = Color(0xFF1E1B4B);
+  static const _indigo = Color(0xFF3730A3);
+  bool _isLoading = false;
+
+  Future<void> _confirmPickup() async {
+    setState(() => _isLoading = true);
+    try {
+      await FirebaseFirestore.instance
+          .collection('orders')
+          .doc(widget.orderId)
+          .update({
+            'fulfillment': 'pickup',
+            'grandTotal': widget.orderTotal,
+            'status': 'confirmed',
+          });
+      if (mounted) {
+        // Close sheet, then show pickup success screen
+        Navigator.pop(context);
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) =>
-                DeliverySelectionScreen(orderId: orderId, orderTotal: total),
+            builder: (_) => _PickupConfirmedScreen(lang: widget.lang),
           ),
         );
       }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+        setState(() => _isLoading = false);
+      }
     }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final lang = widget.lang;
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: EdgeInsets.fromLTRB(
+        24,
+        16,
+        24,
+        24 + MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle bar
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          Text(
+            lang.isSwahili
+                ? 'Jinsi ya Kupokea?'
+                : 'How do you want to receive?',
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF111827),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            lang.isSwahili
+                ? 'Chagua utoaji au kuja kuchukua mwenyewe'
+                : 'Choose delivery or pick up yourself',
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+
+          // Order total pill
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: _navy.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.receipt_outlined, size: 16, color: _navy),
+                const SizedBox(width: 6),
+                Text(
+                  '${lang.isSwahili ? 'Jumla ya Bidhaa' : 'Order Total'}: TShs ${widget.orderTotal.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: _navy,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Delivery option
+          _OptionCard(
+            icon: Icons.delivery_dining,
+            iconColor: _indigo,
+            title: lang.isSwahili ? 'Utoaji' : 'Delivery',
+            subtitle: lang.isSwahili
+                ? 'Chagua dereva — bei inakokotolewa kwa umbali'
+                : 'Choose a driver — cost based on distance',
+            badge: lang.isSwahili ? 'Ada ya ziada' : 'Extra fee',
+            badgeColor: Colors.orange,
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => DeliverySelectionScreen(
+                    orderId: widget.orderId,
+                    orderTotal: widget.orderTotal,
+                  ),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+
+          // Pickup option
+          _OptionCard(
+            icon: Icons.storefront_outlined,
+            iconColor: Colors.green.shade700,
+            title: lang.isSwahili ? 'Kuja Kuchukua' : 'Pick Up Yourself',
+            subtitle: lang.isSwahili
+                ? 'Nenda mwenyewe kwa muuzaji kuchukua agizo lako'
+                : "Go to the seller's location to collect your order",
+            badge: lang.isSwahili ? 'Bila ada' : 'Free',
+            badgeColor: Colors.green,
+            onTap: _isLoading ? null : _confirmPickup,
+            isLoading: _isLoading,
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Option card ───────────────────────────────────────────────────────────────
+class _OptionCard extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+  final String badge;
+  final Color badgeColor;
+  final VoidCallback? onTap;
+  final bool isLoading;
+
+  const _OptionCard({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+    required this.badge,
+    required this.badgeColor,
+    required this.onTap,
+    this.isLoading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final disabled = onTap == null;
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: disabled ? Colors.grey.shade50 : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: disabled
+                ? Colors.grey.shade200
+                : iconColor.withValues(alpha: 0.35),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.shade200,
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: isLoading
+                  ? Padding(
+                      padding: const EdgeInsets.all(14),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: iconColor,
+                      ),
+                    )
+                  : Icon(icon, color: iconColor, size: 26),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: disabled
+                              ? Colors.grey.shade400
+                              : const Color(0xFF111827),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: badgeColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          badge,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: badgeColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade500,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              color: disabled ? Colors.grey.shade300 : Colors.grey.shade400,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Pickup confirmed screen ───────────────────────────────────────────────────
+class _PickupConfirmedScreen extends StatelessWidget {
+  final LanguageProvider lang;
+  const _PickupConfirmedScreen({required this.lang});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.check_circle,
+                  size: 60,
+                  color: Colors.green.shade600,
+                ),
+              ),
+              const SizedBox(height: 28),
+              Text(
+                lang.isSwahili ? 'Agizo Limetumwa!' : 'Order Placed!',
+                style: const TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF111827),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                lang.isSwahili
+                    ? 'Agizo lako limethibitishwa.\nTafadhali nenda kwa muuzaji kuchukua bidhaa zako.'
+                    : 'Your order has been confirmed.\nPlease go to the seller\'s location to collect your items.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: Colors.grey.shade600,
+                  height: 1.6,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.green.shade200),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.storefront_outlined,
+                      color: Colors.green.shade700,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      lang.isSwahili ? 'Kuja Kuchukua' : 'Pick Up',
+                      style: TextStyle(
+                        color: Colors.green.shade700,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 40),
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const CustomerDashboard(),
+                    ),
+                    (route) => false,
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1E1B4B),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    lang.isSwahili ? 'Tazama Maagizo' : 'View My Orders',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
