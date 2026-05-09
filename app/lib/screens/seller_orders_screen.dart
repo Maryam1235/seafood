@@ -104,7 +104,7 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          // ── Search + filter bar ──────────────────────────────────
+          // -- Search + filter bar ----------------------------------
           Widget filterBar = Container(
             color: Colors.white,
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -308,7 +308,7 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
                       ),
                       child: Column(
                         children: [
-                          // ── Header ──────────────────────────────
+                          // -- Header ------------------------------
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 16,
@@ -423,7 +423,7 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
                             ),
                           ),
 
-                          // ── Pickup info banner ───────────────────
+                          // -- Pickup info banner -------------------
                           if (isPickup)
                             FutureBuilder<DocumentSnapshot>(
                               future: FirebaseFirestore.instance
@@ -509,7 +509,7 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
                               },
                             )
                           else
-                            // ── Delivery: customer info row ──────
+                            // -- Delivery: customer info row ------
                             FutureBuilder<DocumentSnapshot>(
                               future: FirebaseFirestore.instance
                                   .collection('users')
@@ -565,7 +565,7 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
                               },
                             ),
 
-                          // ── Items ────────────────────────────────
+                          // -- Items --------------------------------
                           ...myItems.map(
                             (item) => Padding(
                               padding: const EdgeInsets.symmetric(
@@ -628,7 +628,7 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
                             ),
                           ),
 
-                          // ── Subtotal + action buttons ─────────────
+                          // -- Subtotal + action buttons -------------
                           Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
@@ -711,56 +711,7 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
                                   ),
                                 ],
 
-                                // Confirmed: different label for pickup vs delivery
-                                if (status == 'confirmed') ...[
-                                  const SizedBox(height: 12),
-                                  SizedBox(
-                                    width: double.infinity,
-                                    child: ElevatedButton.icon(
-                                      onPressed: () =>
-                                          _updateStatus(doc.id, 'delivered'),
-                                      icon: Icon(
-                                        isPickup
-                                            ? Icons.storefront_outlined
-                                            : Icons.local_shipping_outlined,
-                                      ),
-                                      label: Text(
-                                        isPickup
-                                            ? (lang.isSwahili
-                                                  ? 'Imechukuliwa — Kamilisha'
-                                                  : 'Collected — Mark Complete')
-                                            : (lang.isSwahili
-                                                  ? 'Imekamilika'
-                                                  : 'Mark as Delivered'),
-                                      ),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: isPickup
-                                            ? Colors.green.shade700
-                                            : Colors.green,
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(
-                                            10,
-                                          ),
-                                        ),
-                                        elevation: 0,
-                                      ),
-                                    ),
-                                  ),
-                                  if (isPickup) ...[
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      lang.isSwahili
-                                          ? 'Bonyeza baada ya mteja kuchukua bidhaa'
-                                          : 'Tap after the customer collects their items',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.grey.shade500,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ],
-                                ],
+                                // REPLACE_BLOCK
                               ],
                             ),
                           ),
@@ -819,7 +770,7 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
   }
 }
 
-// ── Sort chip ──────────────────────────────────────────────────────────────
+// -- Sort chip --------------------------------------------------------------
 class _SortChip extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -869,7 +820,7 @@ class _SortChip extends StatelessWidget {
   }
 }
 
-// ── Status chip ────────────────────────────────────────────────────────────
+// -- Status chip ------------------------------------------------------------
 class _StatusChip extends StatelessWidget {
   final String label;
   final Color color;

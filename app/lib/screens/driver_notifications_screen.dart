@@ -294,7 +294,7 @@ class _DriverNotificationsScreenState extends State<DriverNotificationsScreen> {
   ) async {
     if (orderId == null) return;
     await FirebaseFirestore.instance.collection('orders').doc(orderId).update({
-      'delivery.status': 'on_the_way',
+      'delivery.status': 'picking_up',
       'delivery.acceptedAt': FieldValue.serverTimestamp(),
     });
     await notifRef.update({'read': true, 'accepted': true});

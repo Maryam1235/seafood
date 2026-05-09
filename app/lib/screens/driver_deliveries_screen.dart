@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
 import '../services/notification_service.dart';
 
+// ── Active Delivery Screen ────────────────────────────────────────────────────
 class ActiveDeliveryScreen extends StatelessWidget {
   final VoidCallback? onOpenDrawer;
   const ActiveDeliveryScreen({super.key, this.onOpenDrawer});
@@ -32,7 +33,7 @@ class ActiveDeliveryScreen extends StatelessWidget {
         stream: FirebaseFirestore.instance
             .collection('orders')
             .where('delivery.driverId', isEqualTo: uid)
-            .where('delivery.status', isEqualTo: 'on_the_way')
+            .where('delivery.status', whereIn: ['picking_up', 'on_the_way'])
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -69,6 +70,15 @@ class ActiveDeliveryScreen extends StatelessWidget {
               final order = doc.data() as Map<String, dynamic>;
               final items = (order['items'] as List?) ?? [];
               final delivery = order['delivery'] as Map<String, dynamic>?;
+              final deliveryStatus = delivery?['status'] ?? 'picking_up';
+              final isPickingUp = deliveryStatus == 'picking_up';
+
+              // Collect unique seller IDs from items
+              final sellerIds = items
+                  .map((i) => i['sellerId'] as String?)
+                  .whereType<String>()
+                  .toSet()
+                  .toList();
 
               return Container(
                 margin: const EdgeInsets.only(bottom: 14),
@@ -81,95 +91,29 @@ class ActiveDeliveryScreen extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    // Status banner
+                    // ── Step progress banner ──────────────────────
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: Colors.teal.shade50,
+                        color: isPickingUp
+                            ? Colors.orange.shade50
+                            : Colors.teal.shade50,
                         borderRadius: const BorderRadius.vertical(
                           top: Radius.circular(16),
                         ),
                       ),
-                      child: Row(
+                      child: Column(
                         children: [
-                          const Icon(
-                            Icons.delivery_dining,
-                            color: _teal,
-                            size: 28,
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  lang.isSwahili
-                                      ? 'Utoaji Unaoendelea'
-                                      : 'Active Delivery',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
-                                    color: _teal,
-                                  ),
-                                ),
-                                Text(
-                                  '${lang.isSwahili ? 'Agizo' : 'Order'} #${doc.id.substring(0, 6).toUpperCase()}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.teal.shade600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.teal.shade100,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              lang.isSwahili ? 'Njiani' : 'On the way',
-                              style: TextStyle(
-                                color: Colors.teal.shade800,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Customer info
-                    FutureBuilder<DocumentSnapshot>(
-                      future: FirebaseFirestore.instance
-                          .collection('users')
-                          .doc(order['customerId'])
-                          .get(),
-                      builder: (context, snap) {
-                        final customer =
-                            snap.data?.data() as Map<String, dynamic>?;
-                        return Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                          child: Row(
+                          Row(
                             children: [
-                              CircleAvatar(
-                                radius: 22,
-                                backgroundColor: Colors.teal.shade100,
-                                child: Text(
-                                  (customer?['username'] ?? '?')
-                                      .toString()
-                                      .substring(0, 1)
-                                      .toUpperCase(),
-                                  style: TextStyle(
-                                    color: Colors.teal.shade700,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                              Icon(
+                                isPickingUp
+                                    ? Icons.storefront
+                                    : Icons.delivery_dining,
+                                color: isPickingUp
+                                    ? Colors.orange.shade700
+                                    : _teal,
+                                size: 26,
                               ),
                               const SizedBox(width: 10),
                               Expanded(
@@ -177,63 +121,221 @@ class ActiveDeliveryScreen extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      customer?['fullName'] ??
-                                          customer?['username'] ??
-                                          'N/A',
-                                      style: const TextStyle(
+                                      isPickingUp
+                                          ? (lang.isSwahili
+                                                ? 'Hatua 1: Chukua kwa Muuzaji'
+                                                : 'Step 1: Pick Up from Seller')
+                                          : (lang.isSwahili
+                                                ? 'Hatua 2: Peleka kwa Mteja'
+                                                : 'Step 2: Deliver to Customer'),
+                                      style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 14,
+                                        color: isPickingUp
+                                            ? Colors.orange.shade800
+                                            : _teal,
                                       ),
                                     ),
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.phone_outlined,
-                                          size: 13,
-                                          color: Colors.grey.shade500,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          customer?['phone'] ?? 'N/A',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey.shade600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.location_on_outlined,
-                                          size: 13,
-                                          color: Colors.grey.shade500,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Expanded(
-                                          child: Text(
-                                            customer?['location']?['name'] ??
-                                                'N/A',
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey.shade600,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      ],
+                                    Text(
+                                      '${lang.isSwahili ? 'Agizo' : 'Order'} #${doc.id.substring(0, 6).toUpperCase()}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: isPickingUp
+                                            ? Colors.orange.shade600
+                                            : Colors.teal.shade600,
+                                      ),
                                     ),
                                   ],
                                 ),
                               ),
+                              // Step indicator
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isPickingUp
+                                      ? Colors.orange.shade100
+                                      : Colors.teal.shade100,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  isPickingUp ? '1 / 2' : '2 / 2',
+                                  style: TextStyle(
+                                    color: isPickingUp
+                                        ? Colors.orange.shade800
+                                        : Colors.teal.shade800,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
-                        );
-                      },
+                          const SizedBox(height: 10),
+                          // Progress bar
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: isPickingUp ? 0.5 : 1.0,
+                              backgroundColor: Colors.grey.shade200,
+                              color: isPickingUp
+                                  ? Colors.orange.shade400
+                                  : _teal,
+                              minHeight: 6,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
 
-                    // Items preview
+                    // ── Seller info (shown when picking up) ───────
+                    if (isPickingUp)
+                      ...sellerIds.map(
+                        (sellerId) => FutureBuilder<DocumentSnapshot>(
+                          future: FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(sellerId)
+                              .get(),
+                          builder: (context, snap) {
+                            final seller =
+                                snap.data?.data() as Map<String, dynamic>?;
+                            if (seller == null) return const SizedBox();
+                            final sellerName =
+                                seller['fullName'] ??
+                                seller['username'] ??
+                                'Seller';
+                            final sellerPhone = seller['phone'] ?? 'N/A';
+                            final sellerLocation =
+                                seller['location']?['name'] ?? 'N/A';
+
+                            return Container(
+                              margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.shade50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Colors.orange.shade200,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.storefront_outlined,
+                                        size: 14,
+                                        color: Colors.orange.shade700,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        lang.isSwahili
+                                            ? 'Nenda kwa Muuzaji'
+                                            : 'Go to Seller',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.orange.shade800,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  _infoRow(
+                                    Icons.person_outline,
+                                    sellerName,
+                                    Colors.orange.shade700,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  _infoRow(
+                                    Icons.phone_outlined,
+                                    sellerPhone,
+                                    Colors.orange.shade700,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  _infoRow(
+                                    Icons.location_on_outlined,
+                                    sellerLocation,
+                                    Colors.orange.shade700,
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+
+                    // ── Customer info (shown when on the way) ─────
+                    if (!isPickingUp)
+                      FutureBuilder<DocumentSnapshot>(
+                        future: FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(order['customerId'])
+                            .get(),
+                        builder: (context, snap) {
+                          final customer =
+                              snap.data?.data() as Map<String, dynamic>?;
+                          return Container(
+                            margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.teal.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.teal.shade200),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.person_pin_outlined,
+                                      size: 14,
+                                      color: Colors.teal.shade700,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      lang.isSwahili
+                                          ? 'Nenda kwa Mteja'
+                                          : 'Go to Customer',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.teal.shade800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                _infoRow(
+                                  Icons.person_outline,
+                                  customer?['fullName'] ??
+                                      customer?['username'] ??
+                                      'N/A',
+                                  Colors.teal.shade700,
+                                ),
+                                const SizedBox(height: 4),
+                                _infoRow(
+                                  Icons.phone_outlined,
+                                  customer?['phone'] ?? 'N/A',
+                                  Colors.teal.shade700,
+                                ),
+                                const SizedBox(height: 4),
+                                _infoRow(
+                                  Icons.location_on_outlined,
+                                  customer?['location']?['name'] ?? 'N/A',
+                                  Colors.teal.shade700,
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+
+                    // ── Items preview ─────────────────────────────
                     Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -243,52 +345,55 @@ class ActiveDeliveryScreen extends StatelessWidget {
                         children: items
                             .take(2)
                             .map(
-                              (item) => Row(
-                                children: [
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(6),
-                                    child: item['imageUrl'] != null
-                                        ? Image.network(
-                                            item['imageUrl'],
-                                            width: 40,
-                                            height: 40,
-                                            fit: BoxFit.cover,
-                                          )
-                                        : Container(
-                                            width: 40,
-                                            height: 40,
-                                            color: Colors.grey.shade100,
-                                            child: const Icon(
-                                              Icons.set_meal,
-                                              size: 20,
+                              (item) => Padding(
+                                padding: const EdgeInsets.only(bottom: 6),
+                                child: Row(
+                                  children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(6),
+                                      child: item['imageUrl'] != null
+                                          ? Image.network(
+                                              item['imageUrl'],
+                                              width: 40,
+                                              height: 40,
+                                              fit: BoxFit.cover,
+                                            )
+                                          : Container(
+                                              width: 40,
+                                              height: 40,
+                                              color: Colors.grey.shade100,
+                                              child: const Icon(
+                                                Icons.set_meal,
+                                                size: 20,
+                                              ),
                                             ),
-                                          ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      item['name'] ?? '',
-                                      style: const TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w500,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        item['name'] ?? '',
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  Text(
-                                    'x${item['quantity']}',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey.shade500,
+                                    Text(
+                                      'x${item['quantity']}',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade500,
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             )
                             .toList(),
                       ),
                     ),
 
-                    // Total + delivery fee
+                    // ── Totals ────────────────────────────────────
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -348,50 +453,88 @@ class ActiveDeliveryScreen extends StatelessWidget {
                       ),
                     ),
 
-                    // Mark delivered button
+                    // ── Action button ─────────────────────────────
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
                       child: SizedBox(
                         width: double.infinity,
-                        height: 46,
+                        height: 48,
                         child: ElevatedButton.icon(
                           onPressed: () async {
-                            await FirebaseFirestore.instance
-                                .collection('orders')
-                                .doc(doc.id)
-                                .update({
-                                  'status': 'delivered',
-                                  'delivery.status': 'delivered',
-                                  'delivery.deliveredAt':
-                                      FieldValue.serverTimestamp(),
-                                });
-                            await NotificationService.sendOrderStatusNotification(
-                              customerId: order['customerId'],
-                              orderId: doc.id,
-                              status: 'delivered',
-                            );
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    lang.isSwahili
-                                        ? 'Utoaji umekamilika!'
-                                        : 'Delivery completed!',
+                            if (isPickingUp) {
+                              // Step 1 complete → now heading to customer
+                              await FirebaseFirestore.instance
+                                  .collection('orders')
+                                  .doc(doc.id)
+                                  .update({
+                                    'delivery.status': 'on_the_way',
+                                    'delivery.pickedUpAt':
+                                        FieldValue.serverTimestamp(),
+                                  });
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      lang.isSwahili
+                                          ? 'Umechukua bidhaa! Nenda kwa mteja.'
+                                          : 'Items picked up! Head to the customer.',
+                                    ),
+                                    backgroundColor: _teal,
                                   ),
-                                  backgroundColor: Colors.green,
-                                ),
+                                );
+                              }
+                            } else {
+                              // Step 2 complete → delivered
+                              await FirebaseFirestore.instance
+                                  .collection('orders')
+                                  .doc(doc.id)
+                                  .update({
+                                    'status': 'delivered',
+                                    'delivery.status': 'delivered',
+                                    'delivery.deliveredAt':
+                                        FieldValue.serverTimestamp(),
+                                  });
+                              await NotificationService.sendOrderStatusNotification(
+                                customerId: order['customerId'],
+                                orderId: doc.id,
+                                status: 'delivered',
                               );
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      lang.isSwahili
+                                          ? 'Utoaji umekamilika!'
+                                          : 'Delivery completed!',
+                                    ),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              }
                             }
                           },
-                          icon: const Icon(Icons.check_circle_outline),
+                          icon: Icon(
+                            isPickingUp
+                                ? Icons.storefront_outlined
+                                : Icons.check_circle_outline,
+                          ),
                           label: Text(
-                            lang.isSwahili
-                                ? 'Imefika - Kamilisha'
-                                : 'Mark as Delivered',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            isPickingUp
+                                ? (lang.isSwahili
+                                      ? 'Nimechukua — Nenda kwa Mteja'
+                                      : 'Picked Up — Head to Customer')
+                                : (lang.isSwahili
+                                      ? 'Imefika — Kamilisha'
+                                      : 'Delivered — Mark Complete'),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: _teal,
+                            backgroundColor: isPickingUp
+                                ? Colors.orange.shade700
+                                : _teal,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -410,8 +553,30 @@ class ActiveDeliveryScreen extends StatelessWidget {
       ),
     );
   }
+
+  Widget _infoRow(IconData icon, String text, Color color) {
+    return Row(
+      children: [
+        Icon(icon, size: 13, color: color),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 12,
+              color: color,
+              fontWeight: FontWeight.w500,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
 }
 
+// ── Delivery History Screen ───────────────────────────────────────────────────
 class DeliveryHistoryScreen extends StatelessWidget {
   final VoidCallback? onOpenDrawer;
   const DeliveryHistoryScreen({super.key, this.onOpenDrawer});
@@ -544,6 +709,7 @@ class DeliveryHistoryScreen extends StatelessWidget {
   }
 }
 
+// ── Available Orders Screen ───────────────────────────────────────────────────
 class AvailableOrdersScreen extends StatelessWidget {
   final VoidCallback? onOpenDrawer;
   const AvailableOrdersScreen({super.key, this.onOpenDrawer});
