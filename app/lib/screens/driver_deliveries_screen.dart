@@ -635,75 +635,357 @@ class DeliveryHistoryScreen extends StatelessWidget {
               final order = doc.data() as Map<String, dynamic>;
               final delivery = order['delivery'] as Map<String, dynamic>?;
               final deliveredAt = delivery?['deliveredAt'] as Timestamp?;
+              final items = (order['items'] as List?) ?? [];
 
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(color: Colors.grey.shade200, blurRadius: 6),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade50,
-                        borderRadius: BorderRadius.circular(10),
+              return GestureDetector(
+                onTap: () => _showOrderDetail(context, doc.id, order, lang),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(color: Colors.grey.shade200, blurRadius: 6),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade50,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          Icons.check_circle,
+                          color: Colors.green.shade600,
+                          size: 28,
+                        ),
                       ),
-                      child: Icon(
-                        Icons.check_circle,
-                        color: Colors.green.shade600,
-                        size: 28,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${lang.isSwahili ? 'Agizo' : 'Order'} #${doc.id.substring(0, 6).toUpperCase()}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                          Text(
-                            'TShs ${delivery?['cost']?.toStringAsFixed(0) ?? '0'} ${lang.isSwahili ? 'mapato' : 'earned'}',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.green.shade700,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          if (deliveredAt != null)
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
                             Text(
-                              '${deliveredAt.toDate().day}/${deliveredAt.toDate().month}/${deliveredAt.toDate().year}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey.shade500,
+                              '${lang.isSwahili ? 'Agizo' : 'Order'} #${doc.id.substring(0, 6).toUpperCase()}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
                               ),
                             ),
-                        ],
+                            Text(
+                              '${items.length} ${lang.isSwahili ? 'bidhaa' : 'item${items.length == 1 ? '' : 's'}'}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                            if (deliveredAt != null)
+                              Text(
+                                '${deliveredAt.toDate().day}/${deliveredAt.toDate().month}/${deliveredAt.toDate().year}',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade500,
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
-                    ),
-                    Text(
-                      'TShs ${order['grandTotal']?.toStringAsFixed(0) ?? '0'}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF00695C),
-                      ),
-                    ),
-                  ],
+                      Icon(Icons.chevron_right, color: Colors.grey.shade400),
+                    ],
+                  ),
                 ),
               );
             },
           );
         },
+      ),
+    );
+  }
+
+  void _showOrderDetail(
+    BuildContext context,
+    String orderId,
+    Map<String, dynamic> order,
+    LanguageProvider lang,
+  ) {
+    final items = (order['items'] as List?) ?? [];
+    final delivery = order['delivery'] as Map<String, dynamic>?;
+    final deliveredAt = delivery?['deliveredAt'] as Timestamp?;
+    final sellerIds = items
+        .map((i) => i['sellerId'] as String?)
+        .whereType<String>()
+        .toSet()
+        .toList();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.75,
+        maxChildSize: 0.95,
+        minChildSize: 0.4,
+        builder: (_, controller) => Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: ListView(
+            controller: controller,
+            padding: const EdgeInsets.all(20),
+            children: [
+              // Handle bar
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+
+              // Title
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.check_circle,
+                      color: Colors.green.shade600,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${lang.isSwahili ? 'Agizo' : 'Order'} #${orderId.substring(0, 6).toUpperCase()}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      if (deliveredAt != null)
+                        Text(
+                          '${lang.isSwahili ? 'Imetolewa' : 'Delivered'} ${deliveredAt.toDate().day}/${deliveredAt.toDate().month}/${deliveredAt.toDate().year}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // Customer info
+              _DetailSection(
+                title: lang.isSwahili ? 'Mteja' : 'Customer',
+                icon: Icons.person_outline,
+                color: Colors.teal.shade700,
+                child: FutureBuilder<DocumentSnapshot>(
+                  future: FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(order['customerId'])
+                      .get(),
+                  builder: (context, snap) {
+                    final c = snap.data?.data() as Map<String, dynamic>?;
+                    return Column(
+                      children: [
+                        _DetailRow(
+                          Icons.person,
+                          c?['fullName'] ?? c?['username'] ?? 'N/A',
+                        ),
+                        _DetailRow(Icons.phone, c?['phone'] ?? 'N/A'),
+                        _DetailRow(
+                          Icons.location_on,
+                          c?['location']?['name'] ?? 'N/A',
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // Seller(s) info
+              ...sellerIds.map(
+                (sellerId) => Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: _DetailSection(
+                    title: lang.isSwahili ? 'Muuzaji' : 'Seller',
+                    icon: Icons.storefront_outlined,
+                    color: Colors.orange.shade700,
+                    child: FutureBuilder<DocumentSnapshot>(
+                      future: FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(sellerId)
+                          .get(),
+                      builder: (context, snap) {
+                        final s = snap.data?.data() as Map<String, dynamic>?;
+                        return Column(
+                          children: [
+                            _DetailRow(
+                              Icons.person,
+                              s?['fullName'] ?? s?['username'] ?? 'N/A',
+                            ),
+                            _DetailRow(Icons.phone, s?['phone'] ?? 'N/A'),
+                            _DetailRow(
+                              Icons.location_on,
+                              s?['location']?['name'] ?? 'N/A',
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+
+              // Items
+              _DetailSection(
+                title: lang.isSwahili ? 'Bidhaa' : 'Items',
+                icon: Icons.set_meal_outlined,
+                color: Colors.indigo.shade600,
+                child: Column(
+                  children: items
+                      .map<Widget>(
+                        (item) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: item['imageUrl'] != null
+                                    ? Image.network(
+                                        item['imageUrl'],
+                                        width: 40,
+                                        height: 40,
+                                        fit: BoxFit.cover,
+                                      )
+                                    : Container(
+                                        width: 40,
+                                        height: 40,
+                                        color: Colors.grey.shade100,
+                                        child: const Icon(
+                                          Icons.set_meal,
+                                          size: 20,
+                                        ),
+                                      ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  item['name'] ?? '',
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                'x${item['quantity']}',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.grey.shade500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailSection extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final Color color;
+  final Widget child;
+  const _DetailSection({
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 15, color: color),
+              const SizedBox(width: 6),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _DetailRow(this.icon, this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: Colors.grey.shade500),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 13),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
       ),
     );
   }

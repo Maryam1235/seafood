@@ -64,6 +64,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
         onToggle: (v) => setState(() => _isOnline = v),
         onLogout: _logout,
         onOpenDrawer: _openDrawer,
+        onNavigate: (i) => setState(() => _currentIndex = i),
       ),
       DriverNotificationsScreen(onOpenDrawer: _openDrawer), // 1
       ActiveDeliveryScreen(onOpenDrawer: _openDrawer), // 2
@@ -471,6 +472,7 @@ class _DriverHomePage extends StatelessWidget {
   final ValueChanged<bool> onToggle;
   final VoidCallback onLogout;
   final VoidCallback onOpenDrawer;
+  final ValueChanged<int>? onNavigate;
   const _DriverHomePage({
     this.userData,
     required this.lang,
@@ -478,6 +480,7 @@ class _DriverHomePage extends StatelessWidget {
     required this.onToggle,
     required this.onLogout,
     required this.onOpenDrawer,
+    this.onNavigate,
   });
 
   static const _teal = Color(0xFF00695C);
@@ -618,18 +621,6 @@ class _DriverHomePage extends StatelessWidget {
                             (d) => (d.data() as Map)['status'] == 'delivered',
                           )
                           .length;
-                      final earnings = orders
-                          .where(
-                            (d) => (d.data() as Map)['status'] == 'delivered',
-                          )
-                          .fold<double>(
-                            0,
-                            (sum, d) =>
-                                sum +
-                                (((d.data() as Map)['delivery']?['cost'] ?? 0)
-                                        as num)
-                                    .toDouble(),
-                          );
                       return Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
@@ -642,11 +633,6 @@ class _DriverHomePage extends StatelessWidget {
                             label: lang.t('delivery_history'),
                             value: '$delivered',
                             icon: Icons.history,
-                          ),
-                          _StatCard(
-                            label: lang.t('earnings'),
-                            value: 'TShs ${earnings.toStringAsFixed(0)}',
-                            icon: Icons.attach_money,
                           ),
                         ],
                       );
@@ -677,7 +663,7 @@ class _DriverHomePage extends StatelessWidget {
                         ),
                       ),
                       TextButton(
-                        onPressed: () {},
+                        onPressed: () => onNavigate?.call(3),
                         child: Text(
                           lang.isSwahili ? 'Tazama Yote' : 'See All',
                           style: const TextStyle(
@@ -768,39 +754,23 @@ class _DriverHomePage extends StatelessWidget {
                                     ],
                                   ),
                                 ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(
-                                      'TShs ${order['total']?.toStringAsFixed(0) ?? '0'}',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: _navy,
-                                        fontSize: 13,
-                                      ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.orange.shade50,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    lang.isSwahili ? 'Inasubiri' : 'Pending',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.orange.shade700,
+                                      fontWeight: FontWeight.w600,
                                     ),
-                                    Container(
-                                      margin: const EdgeInsets.only(top: 4),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.orange.shade50,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        lang.isSwahili
-                                            ? 'Inasubiri'
-                                            : 'Pending',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: Colors.orange.shade700,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                  ),
                                 ),
                               ],
                             ),
@@ -826,7 +796,7 @@ class _DriverHomePage extends StatelessWidget {
                         ),
                       ),
                       TextButton(
-                        onPressed: () {},
+                        onPressed: () => onNavigate?.call(4),
                         child: Text(
                           lang.isSwahili ? 'Tazama Yote' : 'See All',
                           style: const TextStyle(

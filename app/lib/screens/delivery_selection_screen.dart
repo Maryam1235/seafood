@@ -238,8 +238,8 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
                         ),
                         Text(
                           lang.isSwahili
-                              ? 'Bei inakokotolewa kulingana na umbali wako'
-                              : 'Cost calculated based on your distance',
+                              ? 'Chagua dereva wa kukufikishia agizo lako'
+                              : 'Select a driver to deliver your order',
                           style: const TextStyle(
                             color: Colors.white70,
                             fontSize: 13,
@@ -380,7 +380,6 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
                           final driverLoc =
                               driver['location'] as Map<String, dynamic>?;
                           final vehicle = profile?['vehicleType'] ?? 'Unknown';
-                          final cost = _calcCost(vehicle, driverLoc);
                           final dist = _distLabel(driverLoc);
                           final selected = _selectedDriverId == doc.id;
 
@@ -524,23 +523,6 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
-                                      Text(
-                                        'TShs ${cost.toStringAsFixed(0)}',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                          color: selected
-                                              ? _navy
-                                              : const Color(0xFF111827),
-                                        ),
-                                      ),
-                                      Text(
-                                        lang.isSwahili ? 'Utoaji' : 'Delivery',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: Colors.grey.shade400,
-                                        ),
-                                      ),
                                       const SizedBox(height: 8),
                                       Container(
                                         width: 22,
