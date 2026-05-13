@@ -793,6 +793,7 @@ class _ProductDetailSheet extends StatelessWidget {
                           await CartService().addToCart(product);
                           if (context.mounted) {
                             Navigator.pop(context);
+                            final nav = Navigator.of(rootContext);
                             ScaffoldMessenger.of(rootContext).showSnackBar(
                               SnackBar(
                                 content: Text(
@@ -806,8 +807,7 @@ class _ProductDetailSheet extends StatelessWidget {
                                       ? 'Tazama'
                                       : 'View Cart',
                                   textColor: Colors.white,
-                                  onPressed: () => Navigator.push(
-                                    rootContext,
+                                  onPressed: () => nav.push(
                                     MaterialPageRoute(
                                       builder: (_) => const CartScreen(),
                                     ),

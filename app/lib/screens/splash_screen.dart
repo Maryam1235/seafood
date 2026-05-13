@@ -46,19 +46,13 @@ class _SplashScreenState extends State<SplashScreen>
 
     Future.delayed(const Duration(seconds: 3), () async {
       try {
-        final position = await LocationService().getCurrentLocation();
+        final locationData = await LocationService().getLocationData();
         final user = FirebaseAuth.instance.currentUser;
-        if (position != null && user != null) {
+        if (locationData != null && user != null) {
           await FirebaseFirestore.instance
               .collection('users')
               .doc(user.uid)
-              .update({
-                'location': {
-                  'latitude': position.latitude,
-                  'longitude': position.longitude,
-                  'updatedAt': FieldValue.serverTimestamp(),
-                },
-              });
+              .update({'location': locationData});
         }
       } catch (_) {}
       _navigate();

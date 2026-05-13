@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
 import '../services/auth_service.dart';
+import '../services/location_service.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -93,7 +95,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await _authService.register(
+      final credential = await _authService.register(
         email: _fullEmail,
         password: _passwordController.text,
         username: _usernameController.text.trim(),
@@ -101,6 +103,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
         phone: _phoneController.text.trim(),
         role: _selectedRole,
       );
+
+      // Save location immediately after account creation, while still signed in
+      try {
+        final locationData = await LocationService().getLocationData();
+        if (locationData != null) {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(credential.user!.uid)
+              .update({'location': locationData});
+        }
+      } catch (_) {
+        // Location is optional — don't block registration if it fails
+      }
 
       await _authService.logout();
 

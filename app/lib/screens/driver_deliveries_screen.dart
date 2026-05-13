@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/language_provider.dart';
 import '../services/notification_service.dart';
 
@@ -241,6 +242,65 @@ class ActiveDeliveryScreen extends StatelessWidget {
                                           color: Colors.orange.shade800,
                                         ),
                                       ),
+                                      const Spacer(),
+                                      // ── Map button (seller) ──
+                                      Builder(
+                                        builder: (ctx) {
+                                          final loc =
+                                              seller?['location'] as Map?;
+                                          final lat = (loc?['latitude'] as num?)
+                                              ?.toDouble();
+                                          final lng =
+                                              (loc?['longitude'] as num?)
+                                                  ?.toDouble();
+                                          if (lat == null || lng == null)
+                                            return const SizedBox();
+                                          return GestureDetector(
+                                            onTap: () =>
+                                                ActiveDeliveryScreen._openMaps(
+                                                  ctx,
+                                                  lat,
+                                                  lng,
+                                                  seller?['fullName'] ??
+                                                      'Seller',
+                                                ),
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 10,
+                                                    vertical: 5,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: Colors.orange.shade700,
+                                                borderRadius:
+                                                    BorderRadius.circular(20),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(
+                                                    Icons.map_outlined,
+                                                    size: 13,
+                                                    color: Colors.white,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    lang.isSwahili
+                                                        ? 'Ramani'
+                                                        : 'Map',
+                                                    style: const TextStyle(
+                                                      fontSize: 11,
+                                                      color: Colors.white,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
                                     ],
                                   ),
                                   const SizedBox(height: 8),
@@ -306,6 +366,62 @@ class ActiveDeliveryScreen extends StatelessWidget {
                                         fontWeight: FontWeight.bold,
                                         color: Colors.teal.shade800,
                                       ),
+                                    ),
+                                    const Spacer(),
+                                    // ── Map button (customer) ──
+                                    Builder(
+                                      builder: (ctx) {
+                                        final loc =
+                                            customer?['location'] as Map?;
+                                        final lat = (loc?['latitude'] as num?)
+                                            ?.toDouble();
+                                        final lng = (loc?['longitude'] as num?)
+                                            ?.toDouble();
+                                        if (lat == null || lng == null)
+                                          return const SizedBox();
+                                        return GestureDetector(
+                                          onTap: () =>
+                                              ActiveDeliveryScreen._openMaps(
+                                                ctx,
+                                                lat,
+                                                lng,
+                                                customer?['fullName'] ??
+                                                    'Customer',
+                                              ),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 5,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.teal.shade700,
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(
+                                                  Icons.map_outlined,
+                                                  size: 13,
+                                                  color: Colors.white,
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  lang.isSwahili
+                                                      ? 'Ramani'
+                                                      : 'Map',
+                                                  style: const TextStyle(
+                                                    fontSize: 11,
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ],
                                 ),
@@ -573,6 +689,34 @@ class ActiveDeliveryScreen extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  /// Opens Google Maps with directions from driver's current location to [destLat]/[destLng].
+  /// Falls back to browser if the app is not installed.
+  static Future<void> _openMaps(
+    BuildContext context,
+    double destLat,
+    double destLng,
+    String label,
+  ) async {
+    // Try Google Maps app (with directions from current location)
+    final appUri = Uri.parse('google.navigation:q=$destLat,$destLng&mode=d');
+    // Browser fallback with directions
+    final webUri = Uri.parse(
+      'https://www.google.com/maps/dir/?api=1&destination=$destLat,$destLng&travelmode=driving',
+    );
+
+    if (await canLaunchUrl(appUri)) {
+      await launchUrl(appUri);
+    } else if (await canLaunchUrl(webUri)) {
+      await launchUrl(webUri, mode: LaunchMode.externalApplication);
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Could not open maps')));
+      }
+    }
   }
 }
 

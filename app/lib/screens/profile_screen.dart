@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
 import '../services/auth_service.dart';
+import '../services/location_service.dart';
 import 'login_screen.dart';
 import 'edit_profile_screen.dart';
 
@@ -25,6 +27,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _authService = AuthService();
   Map<String, dynamic>? _userData;
   bool _isLoading = true;
+  bool _isUpdatingLocation = false;
 
   @override
   void initState() {
@@ -42,6 +45,47 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _refreshLocation() async {
+    final lang = context.read<LanguageProvider>();
+    setState(() => _isUpdatingLocation = true);
+    try {
+      final locationData = await LocationService().getLocationData();
+      final user = FirebaseAuth.instance.currentUser;
+      if (locationData != null && user != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .update({'location': locationData});
+        await _loadUser();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                lang.isSwahili ? 'Mahali pamehifadhiwa!' : 'Location updated!',
+              ),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              lang.isSwahili
+                  ? 'Imeshindwa kupata mahali. Ruhusu ruhusa ya eneo.'
+                  : 'Could not get location. Please allow location permission.',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUpdatingLocation = false);
     }
   }
 
@@ -201,7 +245,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _sectionTitle('Account Information'),
                   _infoCard([
                     _infoRow(Icons.email, lang.t('email'), email),
-                    _infoRow(Icons.location_on, lang.t('location'), location),
+                    _locationRow(lang, location),
                     _infoRow(Icons.verified_user, 'Role', role.toUpperCase()),
                   ], widget.themeColor),
                   const SizedBox(height: 24),
@@ -236,6 +280,88 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _locationRow(LanguageProvider lang, String location) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: widget.themeColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(Icons.location_on, color: widget.themeColor, size: 18),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  lang.t('location'),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Colors.grey.shade500,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  location,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1A1A1A),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Refresh location button
+          GestureDetector(
+            onTap: _isUpdatingLocation ? null : _refreshLocation,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: widget.themeColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: _isUpdatingLocation
+                  ? SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: widget.themeColor,
+                      ),
+                    )
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.my_location,
+                          size: 13,
+                          color: widget.themeColor,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          lang.isSwahili ? 'Sasisha' : 'Update',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: widget.themeColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+        ],
       ),
     );
   }
