@@ -699,18 +699,25 @@ class ActiveDeliveryScreen extends StatelessWidget {
     double destLng,
     String label,
   ) async {
-    // Try Google Maps app (with directions from current location)
+    // Google Maps app — navigation with driving directions from current location
     final appUri = Uri.parse('google.navigation:q=$destLat,$destLng&mode=d');
-    // Browser fallback with directions
+    // Browser fallback
     final webUri = Uri.parse(
       'https://www.google.com/maps/dir/?api=1&destination=$destLat,$destLng&travelmode=driving',
     );
 
-    if (await canLaunchUrl(appUri)) {
-      await launchUrl(appUri);
-    } else if (await canLaunchUrl(webUri)) {
+    // Try app first, fall back to browser — skip canLaunchUrl (unreliable on Android 11+)
+    try {
+      final launched = await launchUrl(
+        appUri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (launched) return;
+    } catch (_) {}
+
+    try {
       await launchUrl(webUri, mode: LaunchMode.externalApplication);
-    } else {
+    } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
