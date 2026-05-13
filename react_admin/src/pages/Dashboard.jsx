@@ -6,6 +6,7 @@ import UsersTable from '../components/UsersTable';
 import ProductsTable from '../components/ProductsTable';
 import OrdersTable from '../components/OrdersTable';
 import DeliveryManagement from '../components/DeliveryManagement';
+import Reports from '../components/Reports';
 import Settings from '../components/Settings';
 import AddUser from './AddUser';
 import EditUser from './EditUser';
@@ -42,6 +43,7 @@ export default function Dashboard() {
       />;
       case 'orders': return <OrdersTable />;
       case 'delivery': return <DeliveryManagement />;
+      case 'reports': return <Reports />;
       case 'settings': return <Settings />;
       default: return <Overview />;
     }

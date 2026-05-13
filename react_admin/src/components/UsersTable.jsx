@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Eye, Pencil, Trash2 } from 'lucide-react';
 import styles from './UsersTable.module.css';
@@ -31,14 +31,20 @@ export default function UsersTable({ onAddUser, onEditUser }) {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this user? They will be immediately signed out and blocked from logging in.')) {
-      // Mark as deleted in Firestore — the Flutter app checks this flag on login/splash
-      // We keep the doc so audit history is preserved; the user is effectively blocked
-      await updateDoc(doc(db, 'users', id), {
-        active: false,
-        deleted: true,
-        deletedAt: new Date().toISOString(),
-      });
+    if (showDeleted) {
+      // Permanent delete — user is already soft-deleted, now remove the doc entirely
+      if (window.confirm('Permanently delete this user? This cannot be undone.')) {
+        await deleteDoc(doc(db, 'users', id));
+      }
+    } else {
+      // Soft delete — mark as deleted so the Flutter app blocks them
+      if (window.confirm('Delete this user? They will be immediately signed out and blocked from logging in.')) {
+        await updateDoc(doc(db, 'users', id), {
+          active: false,
+          deleted: true,
+          deletedAt: new Date().toISOString(),
+        });
+      }
     }
   };
 
@@ -158,7 +164,8 @@ export default function UsersTable({ onAddUser, onEditUser }) {
                     <button className={styles.editBtn} onClick={() => onEditUser(u)} title="Edit">
                       <Pencil size={16} />
                     </button>
-                    <button className={styles.deleteBtn} onClick={() => handleDelete(u.id)} title="Delete">
+                    <button className={styles.deleteBtn} onClick={() => handleDelete(u.id)} title={showDeleted ? 'Permanently Delete' : 'Delete'}
+                      style={showDeleted ? { background: '#dc2626', color: 'white', borderRadius: '6px', padding: '4px 8px' } : {}}>
                       <Trash2 size={14} />
                     </button>
                   </div>

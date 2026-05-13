@@ -3,7 +3,7 @@ import { auth } from '../firebase';
 import { useEffect, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { LayoutDashboard, Users, Fish, ShoppingBag, Truck, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, Fish, ShoppingBag, Truck, Settings, LogOut, BarChart2 } from 'lucide-react';
 import styles from './Sidebar.module.css';
 
 const navItems = [
@@ -12,6 +12,7 @@ const navItems = [
   { id: 'products',  label: 'Products Management', icon: Fish },
   { id: 'orders',    label: 'Orders Management',   icon: ShoppingBag },
   { id: 'delivery',  label: 'Delivery Management', icon: Truck },
+  { id: 'reports',   label: 'Reports & Analytics', icon: BarChart2 },
   { id: 'settings',  label: 'Settings',            icon: Settings },
 ];
 

@@ -11,7 +11,7 @@ export default function Overview() {
 
   useEffect(() => {
     const unsub1 = onSnapshot(collection(db, 'users'), (snap) => {
-      const users = snap.docs.map(d => d.data());
+      const users = snap.docs.map(d => d.data()).filter(u => u.deleted !== true);
       setStats({
         total: users.length,
         customers: users.filter(u => u.role === 'customer').length,
