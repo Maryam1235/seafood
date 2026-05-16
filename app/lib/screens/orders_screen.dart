@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
+import 'delivery_selection_screen.dart';
 
 class OrdersScreen extends StatefulWidget {
   final VoidCallback? onOpenDrawer;
@@ -1012,6 +1013,64 @@ class _OrderDetailSheet extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
 
+                  // ── Fulfillment choice (confirmed, not yet chosen) ──
+                  if (status == 'confirmed' &&
+                      order['fulfillment'] == null &&
+                      (delivery == null || delivery['driverId'] == null)) ...[
+                    const SizedBox(height: 4),
+                    _sectionTitle(
+                      lang.isSwahili ? 'Jinsi ya Kupokea?' : 'How to Receive?',
+                    ),
+                    // Delivery option
+                    _FulfillmentOption(
+                      icon: Icons.delivery_dining,
+                      iconColor: const Color(0xFF3730A3),
+                      title: lang.isSwahili ? 'Utoaji' : 'Delivery',
+                      subtitle: lang.isSwahili
+                          ? 'Chagua dereva — bei inakokotolewa kwa umbali'
+                          : 'Choose a driver — cost based on distance',
+                      badge: lang.isSwahili ? 'Ada ya ziada' : 'Extra fee',
+                      badgeColor: Colors.orange,
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => DeliverySelectionScreen(
+                              orderId: orderId,
+                              orderTotal: total.toDouble(),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    // Pickup option
+                    _FulfillmentOption(
+                      icon: Icons.storefront_outlined,
+                      iconColor: Colors.green.shade700,
+                      title: lang.isSwahili
+                          ? 'Kuja Kuchukua'
+                          : 'Pick Up Yourself',
+                      subtitle: lang.isSwahili
+                          ? 'Nenda mwenyewe kwa muuzaji kuchukua agizo lako'
+                          : "Go to the seller's location to collect your order",
+                      badge: lang.isSwahili ? 'Bila ada' : 'Free',
+                      badgeColor: Colors.green,
+                      onTap: () async {
+                        await FirebaseFirestore.instance
+                            .collection('orders')
+                            .doc(orderId)
+                            .update({
+                              'fulfillment': 'pickup',
+                              'grandTotal': total,
+                            });
+                        if (context.mounted) Navigator.pop(context);
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
                   // ── Payment instructions ───────────────────────────
                   _sectionTitle(
                     lang.isSwahili
@@ -1125,6 +1184,114 @@ class _OrderDetailSheet extends StatelessWidget {
     color: Colors.grey.shade100,
     child: Icon(Icons.set_meal, color: Colors.grey.shade300, size: 24),
   );
+}
+
+// ── Fulfillment option card ───────────────────────────────────────────────────
+class _FulfillmentOption extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String subtitle;
+  final String badge;
+  final Color badgeColor;
+  final VoidCallback? onTap;
+
+  const _FulfillmentOption({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.subtitle,
+    required this.badge,
+    required this.badgeColor,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: iconColor.withValues(alpha: 0.35),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.shade200,
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: iconColor, size: 26),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF111827),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: badgeColor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          badge,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: badgeColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade500,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right, color: Colors.grey.shade400),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 // ── Seller payment card ───────────────────────────────────────────────────────

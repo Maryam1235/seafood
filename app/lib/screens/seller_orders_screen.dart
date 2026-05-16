@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
+import '../services/notification_service.dart';
 
 class SellerOrdersScreen extends StatefulWidget {
   final VoidCallback? onOpenDrawer;
@@ -70,10 +71,33 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
     }
   }
 
-  Future<void> _updateStatus(String orderId, String newStatus) async {
+  Future<void> _updateStatus(
+    String orderId,
+    String newStatus,
+    String customerId,
+  ) async {
+    // Update order status in Firestore
     await FirebaseFirestore.instance.collection('orders').doc(orderId).update({
       'status': newStatus,
     });
+
+    // Get seller name for notification
+    final sellerDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(FirebaseAuth.instance.currentUser!.uid)
+        .get();
+    final sellerName =
+        sellerDoc.data()?['fullName'] ??
+        sellerDoc.data()?['username'] ??
+        'Seller';
+
+    // Send push notification to customer
+    await NotificationService.sendOrderConfirmationNotification(
+      customerId: customerId,
+      orderId: orderId,
+      confirmed: newStatus == 'confirmed',
+      sellerName: sellerName,
+    );
   }
 
   @override
@@ -668,6 +692,7 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
                                           onPressed: () => _updateStatus(
                                             doc.id,
                                             'cancelled',
+                                            order['customerId'] ?? '',
                                           ),
                                           style: OutlinedButton.styleFrom(
                                             foregroundColor: Colors.red,
@@ -690,6 +715,7 @@ class _SellerOrdersScreenState extends State<SellerOrdersScreen> {
                                           onPressed: () => _updateStatus(
                                             doc.id,
                                             'confirmed',
+                                            order['customerId'] ?? '',
                                           ),
                                           style: ElevatedButton.styleFrom(
                                             backgroundColor: _navy,

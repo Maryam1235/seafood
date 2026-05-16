@@ -352,20 +352,30 @@ class CartScreen extends StatelessWidget {
 
     if (confirm != true || !context.mounted) return;
 
-    // Step 2 — place order in Firestore
-    final orderId = await cartService.placeOrder(items, total);
+    // Step 2 — place order in Firestore (status stays 'pending' — seller must confirm)
+    await cartService.placeOrder(items, total);
 
     if (!context.mounted) return;
 
-    // Step 3 — ask: Delivery or Pickup?
-    await showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isDismissible: false,
-      enableDrag: false,
-      isScrollControlled: true,
-      builder: (sheetCtx) =>
-          _FulfillmentSheet(orderId: orderId, orderTotal: total, lang: lang),
+    // Step 3 — show success and go to orders screen
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const CustomerDashboard(initialIndex: 1),
+      ),
+      (route) => false,
+    );
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          lang.isSwahili
+              ? 'Agizo limetumwa! Subiri muuzaji kuthibitisha.'
+              : 'Order placed! Waiting for seller to confirm.',
+        ),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 4),
+      ),
     );
   }
 }
