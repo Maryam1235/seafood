@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'notification_service.dart';
 
 class CartService {
   final _db = FirebaseFirestore.instance;
@@ -131,5 +132,45 @@ class CartService {
     });
 
     return orderRef.id;
+  }
+
+  // Notify all sellers after order is placed
+  Future<void> notifySellers({
+    required String orderId,
+    required List<Map<String, dynamic>> items,
+    required double total,
+  }) async {
+    // Get customer name
+    final customerDoc = await _db.collection('users').doc(_uid).get();
+    final customerName =
+        customerDoc.data()?['fullName'] ??
+        customerDoc.data()?['username'] ??
+        'A customer';
+
+    // Group items by seller
+    final Map<String, List<Map<String, dynamic>>> bySeller = {};
+    for (final item in items) {
+      final sellerId = item['sellerId'] as String?;
+      if (sellerId == null) continue;
+      bySeller.putIfAbsent(sellerId, () => []).add(item);
+    }
+
+    // Notify each seller
+    for (final entry in bySeller.entries) {
+      final sellerId = entry.key;
+      final sellerItems = entry.value;
+      final subtotal = sellerItems.fold<double>(
+        0,
+        (sum, i) => sum + ((i['price'] ?? 0) * (i['quantity'] ?? 1)),
+      );
+
+      await NotificationService.sendNewOrderNotification(
+        sellerId: sellerId,
+        orderId: orderId,
+        customerName: customerName,
+        itemCount: sellerItems.length,
+        subtotal: subtotal,
+      );
+    }
   }
 }

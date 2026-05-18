@@ -5,11 +5,10 @@
 /* ── KPI row ── */
 .kpiRow {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   gap: 16px;
   margin-bottom: 28px;
 }
-
 .statCard {
   background: white;
   border-radius: 12px;
@@ -19,68 +18,225 @@
   gap: 16px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.07);
 }
-
 .statIcon {
-  width: 44px;
-  height: 44px;
+  width: 44px; height: 44px;
   border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
-
 .statValue { font-size: 22px; font-weight: 700; color: #111827; line-height: 1.2; }
 .statLabel { font-size: 12px; color: #6b7280; margin-top: 2px; }
 .statSub   { font-size: 11px; color: #10b981; margin-top: 2px; font-weight: 600; }
 
-/* ── Chart rows ── */
+/* ── Chart grid ── */
 .row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
   margin-bottom: 20px;
 }
-
 .chartCard {
   background: white;
   border-radius: 14px;
   padding: 22px 20px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.07);
 }
-
 .wide { grid-column: 1 / -1; }
-
 .chartTitle {
-  font-size: 15px;
-  font-weight: 600;
-  color: #111827;
-  margin-bottom: 18px;
-  display: flex;
-  align-items: center;
+  font-size: 15px; font-weight: 600; color: #111827;
+  margin-bottom: 20px;
+  display: flex; align-items: center;
 }
 
-.empty { color: #9ca3af; font-size: 14px; text-align: center; padding: 40px 0; }
+/* ── Empty states ── */
+.empty { color: #9ca3af; font-size: 14px; text-align: center; padding: 32px 0; margin: 0; }
+.emptyChart {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 32px 0; gap: 10px;
+}
+
+/* ── Vertical bar chart (CSS) ── */
+.barChart {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  height: 200px;
+  padding-bottom: 28px;
+  position: relative;
+}
+.barGroup {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  position: relative;
+}
+.barValueLabel {
+  font-size: 10px;
+  color: #6b7280;
+  margin-bottom: 4px;
+  text-align: center;
+  min-height: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.barTrack {
+  flex: 1;
+  width: 100%;
+  background: #f3f4f6;
+  border-radius: 6px 6px 0 0;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+.barFill {
+  width: 100%;
+  border-radius: 6px 6px 0 0;
+  transition: height 0.4s ease;
+  min-height: 2px;
+}
+.barLabel {
+  position: absolute;
+  bottom: -22px;
+  font-size: 11px;
+  color: #6b7280;
+  text-align: center;
+  width: 100%;
+}
+
+/* ── Grouped bars ── */
+.groupedBars {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+}
+.groupedBarWrap {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  background: #f3f4f6;
+  border-radius: 4px 4px 0 0;
+  overflow: hidden;
+}
+.groupedLegend {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+/* ── Horizontal bar chart ── */
+.hBarList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.hBarRow {
+  display: grid;
+  grid-template-columns: 110px 1fr 36px;
+  align-items: center;
+  gap: 10px;
+}
+.hBarLabel {
+  font-size: 13px;
+  color: #374151;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hBarTrack {
+  height: 20px;
+  background: #f3f4f6;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.hBarFill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.4s ease;
+  min-width: 4px;
+}
+.hBarValue {
+  font-size: 12px;
+  font-weight: 700;
+  color: #374151;
+  text-align: right;
+}
+
+/* ── Donut / pie chart ── */
+.donutWrap {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+.donut {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.donutHole {
+  width: 90px;
+  height: 90px;
+  background: white;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.donutTotal { font-size: 22px; font-weight: 700; color: #111827; }
+.donutTotalLabel { font-size: 11px; color: #9ca3af; }
+.donutLegend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 120px;
+}
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #374151;
+}
+.legendDot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.legendName { flex: 1; }
+.legendVal  { font-weight: 600; color: #111827; font-size: 12px; }
 
 /* ── Driver table ── */
-.driverTable { display: flex; flex-direction: column; gap: 0; }
-
+.driverTable { display: flex; flex-direction: column; }
 .driverHeader {
   display: grid;
   grid-template-columns: 1fr 80px 100px;
   padding: 8px 12px;
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 11px; font-weight: 700;
   color: #9ca3af;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  text-transform: uppercase; letter-spacing: 0.5px;
   border-bottom: 1px solid #f3f4f6;
 }
-
 .driverRow {
   display: grid;
   grid-template-columns: 1fr 80px 100px;
-  padding: 12px 12px;
+  padding: 12px;
   border-bottom: 1px solid #f9fafb;
   align-items: center;
   font-size: 14px;
@@ -88,21 +244,14 @@
 }
 .driverRow:hover { background: #f9fafb; }
 .driverRow:last-child { border-bottom: none; }
-
 .driverRank { display: flex; align-items: center; gap: 10px; font-weight: 500; color: #111827; }
-
 .rankBadge {
-  width: 22px;
-  height: 22px;
+  width: 22px; height: 22px;
   border-radius: 50%;
-  font-size: 11px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
-
 .driverDeliveries { font-weight: 700; color: #4f46e5; text-align: center; }
 .driverEarned     { font-weight: 600; color: #059669; text-align: right; }
 
@@ -112,40 +261,25 @@
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 16px;
 }
-
 .stockItem { display: flex; flex-direction: column; gap: 6px; }
-
 .stockName {
-  font-size: 13px;
-  font-weight: 500;
-  color: #374151;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 13px; font-weight: 500; color: #374151;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-
 .stockBar {
-  height: 8px;
-  background: #f3f4f6;
-  border-radius: 4px;
-  overflow: hidden;
+  height: 8px; background: #f3f4f6;
+  border-radius: 4px; overflow: hidden;
 }
-
-.stockFill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.4s ease;
-}
-
-.stockQty { font-size: 12px; font-weight: 600; }
+.stockFill { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+.stockQty  { font-size: 12px; font-weight: 600; }
 
 /* ── Responsive ── */
 @media (max-width: 900px) {
   .row { grid-template-columns: 1fr; }
   .wide { grid-column: 1; }
   .kpiRow { grid-template-columns: repeat(2, 1fr); }
+  .hBarRow { grid-template-columns: 80px 1fr 30px; }
 }
-
 @media (max-width: 500px) {
   .kpiRow { grid-template-columns: 1fr; }
 }

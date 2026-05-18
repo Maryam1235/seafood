@@ -1,172 +1,158 @@
-import 'dart:convert';
+/**
+ * NotificationService — Flutter side
+ *
+ * Responsibilities:
+ *   1. Request notification permission from the device
+ *   2. Save the FCM device token to Firestore so Cloud Functions can send pushes
+ *   3. Handle foreground/background message events
+ *
+ * What this does NOT do:
+ *   - Does NOT call FCM API directly
+ *   - Does NOT hold any server key or service account credentials
+ *   - Does NOT send push notifications itself
+ *
+ * Push notifications are sent by Firebase Cloud Functions (functions/index.js)
+ * which run securely on Google's servers using the Firebase Admin SDK.
+ */
+
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 
-// Background message handler — must be top-level
+// Must be a top-level function — called when app is in background/terminated
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  debugPrint('Background message: ${message.notification?.title}');
+  // Firebase SDK automatically shows the notification popup.
+  // Nothing extra needed here unless you want custom handling.
+  debugPrint('Background push received: ${message.notification?.title}');
 }
 
 class NotificationService {
   static final _messaging = FirebaseMessaging.instance;
   static final _db = FirebaseFirestore.instance;
 
-  // ── Init ────────────────────────────────────────────────────────────────────
+  // ── Call once in main.dart before runApp ────────────────────────────────────
   static Future<void> init() async {
+    // Register background handler FIRST
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-    await _messaging.requestPermission(alert: true, badge: true, sound: true);
+    // Ask the user for notification permission
+    final settings = await _messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+      provisional: false,
+    );
+    debugPrint('Notification permission: ${settings.authorizationStatus}');
 
-    // Set foreground notification presentation options
+    // Show notification banner even when app is open (foreground)
     await _messaging.setForegroundNotificationPresentationOptions(
       alert: true,
       badge: true,
       sound: true,
     );
 
+    // Save this device's token so Cloud Functions know where to send pushes
     await saveFcmToken();
 
-    _messaging.onTokenRefresh.listen((token) async {
-      await _saveToken(token);
+    // Keep token fresh — Firebase rotates tokens occasionally
+    _messaging.onTokenRefresh.listen((newToken) {
+      debugPrint('FCM token refreshed');
+      _saveToken(newToken);
     });
 
-    // Show foreground messages as snackbar/notification
+    // App is open and a push arrives — log it (banner is shown automatically)
     FirebaseMessaging.onMessage.listen((message) {
       debugPrint(
-        'Foreground: ${message.notification?.title} — ${message.notification?.body}',
+        'Foreground push: ${message.notification?.title} — ${message.notification?.body}',
       );
     });
+
+    // User tapped a notification while app was in background
+    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      debugPrint('Notification tapped (background): ${message.data}');
+      // TODO: navigate to the relevant order screen based on message.data['orderId']
+    });
+
+    // App was fully closed and user tapped the notification to open it
+    final initialMessage = await _messaging.getInitialMessage();
+    if (initialMessage != null) {
+      debugPrint('App opened from notification: ${initialMessage.data}');
+      // TODO: navigate to the relevant order screen
+    }
   }
 
-  // ── Token management ────────────────────────────────────────────────────────
+  // ── Save FCM token to Firestore ─────────────────────────────────────────────
+  // Cloud Functions read this token to know which device to send the push to.
   static Future<void> saveFcmToken() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
     final token = await _messaging.getToken();
-    if (token != null) await _saveToken(token);
+    if (token != null) {
+      await _saveToken(token);
+      debugPrint('FCM token saved for user $uid');
+    }
   }
 
   static Future<void> _saveToken(String token) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
-    await _db.collection('users').doc(uid).update({'fcmToken': token});
-  }
-
-  // ── Core: send FCM push via HTTP v1 API ─────────────────────────────────────
-  // Uses the FCM legacy HTTP API with the server key stored in Firestore settings.
-  // This allows sending push notifications directly from the app without a server.
-  static Future<void> _sendPush({
-    required String fcmToken,
-    required String title,
-    required String body,
-    Map<String, String>? data,
-  }) async {
     try {
-      // Fetch server key from Firestore (stored by admin in settings)
-      final settingsDoc = await _db.collection('settings').doc('fcm').get();
-      final serverKey = settingsDoc.data()?['serverKey'] as String?;
-      if (serverKey == null || serverKey.isEmpty) {
-        debugPrint('FCM server key not configured in Firestore settings/fcm');
-        return;
-      }
-
-      final response = await http.post(
-        Uri.parse('https://fcm.googleapis.com/fcm/send'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'key=$serverKey',
-        },
-        body: jsonEncode({
-          'to': fcmToken,
-          'priority': 'high',
-          'notification': {
-            'title': title,
-            'body': body,
-            'sound': 'default',
-            'android_channel_id': 'zanseafood_orders',
-          },
-          'data': {'click_action': 'FLUTTER_NOTIFICATION_CLICK', ...?data},
-        }),
-      );
-
-      debugPrint('FCM response: ${response.statusCode} ${response.body}');
+      await _db.collection('users').doc(uid).update({'fcmToken': token});
     } catch (e) {
-      debugPrint('FCM push error: $e');
+      debugPrint('Failed to save FCM token: $e');
     }
   }
 
-  // ── Get recipient FCM token ─────────────────────────────────────────────────
-  static Future<String?> _getToken(String uid) async {
-    final doc = await _db.collection('users').doc(uid).get();
-    return doc.data()?['fcmToken'] as String?;
-  }
+  // ── These methods write in-app notifications to Firestore ───────────────────
+  // The Cloud Function (onNewOrder / onOrderUpdated) also sends the real push.
+  // These are called from the app to ensure the in-app bell shows immediately.
 
-  // ── Store notification in Firestore (in-app) ────────────────────────────────
-  static Future<void> _storeNotification({
-    required String userId,
-    required String type,
-    required String title,
-    required String body,
+  static Future<void> sendNewOrderNotification({
+    required String sellerId,
     required String orderId,
-    String? status,
-    String? vehicleType,
+    required String customerName,
+    required int itemCount,
+    required double subtotal,
   }) async {
+    // Cloud Function handles the push. We just write the in-app notification
+    // here so the seller's bell badge updates instantly inside the app.
     await _db.collection('notifications').add({
-      'userId': userId,
-      'type': type,
-      'title': title,
-      'body': body,
+      'userId': sellerId,
+      'type': 'new_order',
+      'title': 'New Order Received 🛒',
+      'body':
+          '$customerName ordered $itemCount item${itemCount > 1 ? 's' : ''} — TShs ${subtotal.toStringAsFixed(0)}',
       'orderId': orderId,
-      if (status != null) 'status': status,
-      if (vehicleType != null) 'vehicleType': vehicleType,
+      'customerName': customerName,
       'read': false,
       'createdAt': FieldValue.serverTimestamp(),
     });
   }
 
-  // ── PUBLIC: Seller confirmed or cancelled order → notify customer ────────────
   static Future<void> sendOrderConfirmationNotification({
     required String customerId,
     required String orderId,
-    required bool confirmed, // true = confirmed, false = cancelled
+    required bool confirmed,
     String? sellerName,
   }) async {
-    final title = confirmed ? 'Order Confirmed ✅' : 'Order Cancelled ❌';
-    final body = confirmed
-        ? 'Your order has been confirmed by the seller. Please select a delivery driver.'
-        : 'Sorry, your order has been cancelled by the seller.${sellerName != null ? ' ($sellerName)' : ''}';
-
-    // 1. Store in Firestore for in-app notification
-    await _storeNotification(
-      userId: customerId,
-      type: 'order_status',
-      title: title,
-      body: body,
-      orderId: orderId,
-      status: confirmed ? 'confirmed' : 'cancelled',
-    );
-
-    // 2. Send real push notification to device
-    final token = await _getToken(customerId);
-    if (token != null) {
-      await _sendPush(
-        fcmToken: token,
-        title: title,
-        body: body,
-        data: {
-          'orderId': orderId,
-          'type': 'order_status',
-          'status': confirmed ? 'confirmed' : 'cancelled',
-        },
-      );
-    }
+    // Cloud Function handles the push automatically when order.status changes.
+    // This writes the in-app notification for immediate bell badge update.
+    await _db.collection('notifications').add({
+      'userId': customerId,
+      'type': 'order_status',
+      'title': confirmed ? 'Order Confirmed ✅' : 'Order Cancelled ❌',
+      'body': confirmed
+          ? 'Your order has been confirmed. Please choose how you want to receive it.'
+          : 'Sorry, your order was cancelled${sellerName != null ? ' by $sellerName' : ''}.',
+      'orderId': orderId,
+      'status': confirmed ? 'confirmed' : 'cancelled',
+      'read': false,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
   }
 
-  // ── PUBLIC: Driver assigned → notify driver ──────────────────────────────────
   static Future<void> sendDeliveryNotification({
     required String driverId,
     required String orderId,
@@ -174,34 +160,19 @@ class NotificationService {
     required String orderTotal,
     required String vehicleType,
   }) async {
-    const title = 'New Delivery Request 🚀';
-    final body = 'New delivery from $customerName. Total: TShs $orderTotal';
-
-    await _storeNotification(
-      userId: driverId,
-      type: 'new_delivery',
-      title: title,
-      body: body,
-      orderId: orderId,
-      vehicleType: vehicleType,
-    );
-
-    final token = await _getToken(driverId);
-    if (token != null) {
-      await _sendPush(
-        fcmToken: token,
-        title: title,
-        body: body,
-        data: {
-          'orderId': orderId,
-          'type': 'new_delivery',
-          'vehicleType': vehicleType,
-        },
-      );
-    }
+    await _db.collection('notifications').add({
+      'userId': driverId,
+      'type': 'new_delivery',
+      'title': 'New Delivery Request 🚀',
+      'body': 'New delivery from $customerName. Fee: TShs $orderTotal',
+      'orderId': orderId,
+      'vehicleType': vehicleType,
+      'customerName': customerName,
+      'read': false,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
   }
 
-  // ── PUBLIC: Order status update → notify customer ────────────────────────────
   static Future<void> sendOrderStatusNotification({
     required String customerId,
     required String orderId,
@@ -219,26 +190,18 @@ class NotificationService {
         break;
       default:
         title = 'Order Update';
-        body = 'Your order status has been updated to $status';
+        body = 'Your order status: $status';
     }
 
-    await _storeNotification(
-      userId: customerId,
-      type: 'order_status',
-      title: title,
-      body: body,
-      orderId: orderId,
-      status: status,
-    );
-
-    final token = await _getToken(customerId);
-    if (token != null) {
-      await _sendPush(
-        fcmToken: token,
-        title: title,
-        body: body,
-        data: {'orderId': orderId, 'type': 'order_status', 'status': status},
-      );
-    }
+    await _db.collection('notifications').add({
+      'userId': customerId,
+      'type': 'order_status',
+      'title': title,
+      'body': body,
+      'orderId': orderId,
+      'status': status,
+      'read': false,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
   }
 }

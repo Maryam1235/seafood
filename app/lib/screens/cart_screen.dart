@@ -353,7 +353,14 @@ class CartScreen extends StatelessWidget {
     if (confirm != true || !context.mounted) return;
 
     // Step 2 — place order in Firestore (status stays 'pending' — seller must confirm)
-    await cartService.placeOrder(items, total);
+    final orderId = await cartService.placeOrder(items, total);
+
+    // Step 3 — notify sellers (background push + in-app notification)
+    await cartService.notifySellers(
+      orderId: orderId,
+      items: items,
+      total: total,
+    );
 
     if (!context.mounted) return;
 
