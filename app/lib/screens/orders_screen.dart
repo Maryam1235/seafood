@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/language_provider.dart';
 import 'delivery_selection_screen.dart';
 
@@ -977,7 +978,7 @@ class _OrderDetailSheet extends StatelessWidget {
                           bold: true,
                         ),
                         const SizedBox(height: 10),
-                        // Fulfillment type
+                        // Fulfillment type + map button for driver location
                         Row(
                           children: [
                             Icon(
@@ -990,22 +991,107 @@ class _OrderDetailSheet extends StatelessWidget {
                                   : Colors.blue.shade700,
                             ),
                             const SizedBox(width: 6),
-                            Text(
-                              fulfillment == 'pickup'
-                                  ? (lang.isSwahili
-                                        ? 'Kuja Kuchukua — Bila ada ya utoaji'
-                                        : 'Pick Up — No delivery fee')
-                                  : (lang.isSwahili
-                                        ? 'Utoaji — Dereva: ${delivery?['driverName'] ?? 'N/A'}'
-                                        : 'Delivery — Driver: ${delivery?['driverName'] ?? 'N/A'}'),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: fulfillment == 'pickup'
-                                    ? Colors.green.shade700
-                                    : Colors.blue.shade700,
-                                fontWeight: FontWeight.w500,
+                            Expanded(
+                              child: Text(
+                                fulfillment == 'pickup'
+                                    ? (lang.isSwahili
+                                          ? 'Kuja Kuchukua — Bila ada ya utoaji'
+                                          : 'Pick Up — No delivery fee')
+                                    : (lang.isSwahili
+                                          ? 'Utoaji — Dereva: ${delivery?['driverName'] ?? 'N/A'}'
+                                          : 'Delivery — Driver: ${delivery?['driverName'] ?? 'N/A'}'),
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: fulfillment == 'pickup'
+                                      ? Colors.green.shade700
+                                      : Colors.blue.shade700,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
+                            // Map button — shows driver's current location
+                            if (fulfillment != 'pickup' &&
+                                delivery?['driverId'] != null)
+                              FutureBuilder<DocumentSnapshot>(
+                                future: FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(delivery!['driverId'] as String)
+                                    .get(),
+                                builder: (context, driverSnap) {
+                                  final driverData =
+                                      driverSnap.data?.data()
+                                          as Map<String, dynamic>?;
+                                  final loc =
+                                      driverData?['location']
+                                          as Map<String, dynamic>?;
+                                  final lat = (loc?['latitude'] as num?)
+                                      ?.toDouble();
+                                  final lng = (loc?['longitude'] as num?)
+                                      ?.toDouble();
+                                  if (lat == null || lng == null) {
+                                    return const SizedBox();
+                                  }
+                                  return GestureDetector(
+                                    onTap: () async {
+                                      // Try Google Maps app first
+                                      final appUri = Uri.parse(
+                                        'geo:$lat,$lng?q=$lat,$lng(${Uri.encodeComponent(delivery['driverName'] ?? 'Driver')})',
+                                      );
+                                      final webUri = Uri.parse(
+                                        'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+                                      );
+                                      try {
+                                        final launched = await launchUrl(
+                                          appUri,
+                                          mode: LaunchMode.externalApplication,
+                                        );
+                                        if (!launched) {
+                                          await launchUrl(
+                                            webUri,
+                                            mode:
+                                                LaunchMode.externalApplication,
+                                          );
+                                        }
+                                      } catch (_) {
+                                        await launchUrl(
+                                          webUri,
+                                          mode: LaunchMode.externalApplication,
+                                        );
+                                      }
+                                    },
+                                    child: Container(
+                                      margin: const EdgeInsets.only(left: 8),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 5,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.blue.shade700,
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(
+                                            Icons.map_outlined,
+                                            size: 13,
+                                            color: Colors.white,
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            lang.isSwahili ? 'Ramani' : 'Map',
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
                           ],
                         ),
                       ],
