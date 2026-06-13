@@ -1,20 +1,195 @@
-.title { font-size: 26px; font-weight: 700; color: #111827; }
-.sub { color: #6b7280; margin-top: 4px; margin-bottom: 32px; }
+/* ── Layout ── */
+.wrap { padding: 0 0 40px; display: flex; flex-direction: column; gap: 20px; }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 20px;
+/* ── Header ── */
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #f3f4f6;
+}
+.greeting { font-size: 13px; color: #6b7280; margin-bottom: 4px; }
+.title    { font-size: 24px; font-weight: 800; color: #111827; margin: 0; }
+.sub      { font-size: 13px; color: #9ca3af; margin: 4px 0 0; }
+.dateBadge {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: #6b7280;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 6px 12px;
+  white-space: nowrap;
 }
 
+/* ── Section labels ── */
+.sectionLabel {
+  font-size: 11px;
+  font-weight: 700;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: -8px;
+}
+
+/* ── 4-col stat grid ── */
+.grid4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+/* ── Stat card ── */
+.statCard {
+  background: white;
+  border-radius: 14px;
+  padding: 18px 20px 0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 8px rgba(0,0,0,0.04);
+  overflow: hidden;
+  transition: box-shadow 0.2s, transform 0.2s;
+  cursor: default;
+}
+.statCard:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
+}
+.statLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.statIconWrap {
+  width: 46px; height: 46px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.statLabel { font-size: 12px; color: #6b7280; font-weight: 500; margin-bottom: 2px; }
+.statValue { font-size: 26px; font-weight: 800; color: #111827; line-height: 1; }
+.statSub   { font-size: 11px; color: #10b981; margin-top: 3px; font-weight: 600; }
+.statBar   { height: 4px; background: #f3f4f6; border-radius: 0 0 14px 14px; margin: 0 -20px; }
+.statBarFill { height: 100%; width: 65%; border-radius: 0 4px 4px 0; opacity: 0.6; }
+
+/* ── Middle 3-col row ── */
+.midRow {
+  display: grid;
+  grid-template-columns: 1.4fr 0.8fr 1fr;
+  gap: 16px;
+}
+
+/* ── Generic card ── */
 .card {
   background: white;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-  text-align: center;
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 8px rgba(0,0,0,0.04);
+}
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 16px;
+}
+.badge {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  background: #f3f4f6;
+  color: #6b7280;
+  padding: 2px 8px;
+  border-radius: 20px;
 }
 
-.cardIcon { display: flex; justify-content: center; margin-bottom: 12px; }
-.cardValue { font-size: 40px; font-weight: 700; color: #111827; }
-.cardLabel { color: #6b7280; margin-top: 4px; font-size: 14px; }
+/* ── Order status bars ── */
+.statusList { display: flex; flex-direction: column; gap: 12px; }
+.statusRow  { display: grid; grid-template-columns: 10px 80px 1fr 28px 36px; align-items: center; gap: 8px; }
+.statusDot  { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.statusLabel { font-size: 13px; color: #374151; font-weight: 500; }
+.statusTrack {
+  height: 8px; background: #f3f4f6;
+  border-radius: 4px; overflow: hidden;
+}
+.statusFill  { height: 100%; border-radius: 4px; transition: width 0.5s ease; min-width: 2px; }
+.statusCount { font-size: 13px; font-weight: 700; color: #111827; text-align: right; }
+.statusPct   { font-size: 11px; color: #9ca3af; text-align: right; }
+
+/* ── Delivery ring ── */
+.ring {
+  width: 130px; height: 130px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.ringInner {
+  width: 90px; height: 90px;
+  background: white;
+  border-radius: 50%;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+}
+.ringPct   { font-size: 22px; font-weight: 800; color: #111827; }
+.ringLabel { font-size: 10px; color: #9ca3af; }
+.ringStats { display: flex; align-items: center; gap: 16px; }
+.ringStat  { text-align: center; }
+.ringDivider { width: 1px; height: 32px; background: #e5e7eb; }
+
+/* ── Recent orders table ── */
+.tableWrap { overflow-x: auto; margin-top: 4px; }
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.table thead tr {
+  border-bottom: 2px solid #f3f4f6;
+}
+.table th {
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.table td {
+  padding: 12px 12px;
+  border-bottom: 1px solid #f9fafb;
+  color: #374151;
+  vertical-align: middle;
+}
+.table tbody tr:last-child td { border-bottom: none; }
+.table tbody tr:hover td { background: #fafafa; }
+.orderId    { font-weight: 700; color: #111827; font-family: monospace; font-size: 13px; }
+.orderTotal { font-weight: 700; color: #1e1b4b; }
+.timeAgo    { color: #9ca3af; font-size: 12px; white-space: nowrap; }
+.emptyCell  { text-align: center; color: #9ca3af; padding: 32px; }
+
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1100px) {
+  .grid4  { grid-template-columns: repeat(2, 1fr); }
+  .midRow { grid-template-columns: 1fr 1fr; }
+  .midRow > :last-child { grid-column: 1 / -1; }
+}
+@media (max-width: 640px) {
+  .grid4  { grid-template-columns: 1fr; }
+  .midRow { grid-template-columns: 1fr; }
+}

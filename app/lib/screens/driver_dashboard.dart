@@ -66,7 +66,10 @@ class _DriverDashboardState extends State<DriverDashboard> {
         onOpenDrawer: _openDrawer,
         onNavigate: (i) => setState(() => _currentIndex = i),
       ),
-      DriverNotificationsScreen(onOpenDrawer: _openDrawer), // 1
+      DriverNotificationsScreen(
+        onOpenDrawer: _openDrawer,
+        onNavigate: (i) => setState(() => _currentIndex = i),
+      ), // 1
       ActiveDeliveryScreen(onOpenDrawer: _openDrawer), // 2
       AvailableOrdersScreen(onOpenDrawer: _openDrawer), // 3
       DeliveryHistoryScreen(onOpenDrawer: _openDrawer), // 4
