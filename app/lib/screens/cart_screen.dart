@@ -352,7 +352,8 @@ class CartScreen extends StatelessWidget {
 
     if (confirm != true || !context.mounted) return;
 
-    // Step 2 — place order in Firestore (status stays 'pending' — seller must confirm)
+    // Step 2 — place order in Firestore (created as 'pending'; the fulfillment
+    // sheet below advances it once the customer chooses delivery or pickup)
     final orderId = await cartService.placeOrder(items, total);
 
     // Step 3 — notify sellers (background push + in-app notification)
@@ -364,24 +365,16 @@ class CartScreen extends StatelessWidget {
 
     if (!context.mounted) return;
 
-    // Step 3 — show success and go to orders screen
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const CustomerDashboard(initialIndex: 1),
-      ),
-      (route) => false,
-    );
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          lang.isSwahili
-              ? 'Agizo limetumwa! Subiri muuzaji kuthibitisha.'
-              : 'Order placed! Waiting for seller to confirm.',
-        ),
-        backgroundColor: Colors.green,
-        duration: const Duration(seconds: 4),
+    // Step 4 — choose fulfillment right away: Delivery routes to driver
+    // selection + payment, Pickup confirms without an online payment.
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _FulfillmentSheet(
+        orderId: orderId,
+        orderTotal: total,
+        lang: lang,
       ),
     );
   }
@@ -421,9 +414,9 @@ class _FulfillmentSheetState extends State<_FulfillmentSheet> {
           });
       if (mounted) {
         // Close sheet, then show pickup success screen
-        Navigator.pop(context);
-        Navigator.pushReplacement(
-          context,
+        final navigator = Navigator.of(context);
+        navigator.pop();
+        navigator.pushReplacement(
           MaterialPageRoute(
             builder: (_) => _PickupConfirmedScreen(lang: widget.lang),
           ),
@@ -524,9 +517,9 @@ class _FulfillmentSheetState extends State<_FulfillmentSheet> {
             badge: lang.isSwahili ? 'Ada ya ziada' : 'Extra fee',
             badgeColor: Colors.orange,
             onTap: () {
-              Navigator.pop(context);
-              Navigator.pushReplacement(
-                context,
+              final navigator = Navigator.of(context);
+              navigator.pop(); // close the sheet
+              navigator.push(
                 MaterialPageRoute(
                   builder: (_) => DeliverySelectionScreen(
                     orderId: widget.orderId,

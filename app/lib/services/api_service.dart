@@ -5,13 +5,14 @@ import 'package:http/http.dart' as http;
 /// Talks to the self-hosted NestJS backend (seafood-api), which replaces the
 /// Firebase Cloud Functions for ClickPesa payments.
 ///
-/// The base URL is provided at build/run time:
-///   flutter run --dart-define=API_BASE_URL=https://api.your-domain.com
-/// Defaults to localhost for local development against `npm run start:dev`.
+/// The app always talks to the remote production server. The URL can still be
+/// overridden at build/run time if ever needed, e.g. to point at a staging box:
+///   flutter run --dart-define=API_BASE_URL=https://staging.arifa.org
+/// but it defaults to the live server so release builds need no extra flags.
 class ApiService {
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:3000',
+    defaultValue: 'https://api.arifa.org',
   );
 
   /// POST a JSON body to [path], attaching the current user's Firebase ID token

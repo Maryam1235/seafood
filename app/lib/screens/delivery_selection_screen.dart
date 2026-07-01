@@ -159,8 +159,15 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
       });
 
       final paymentUrl = results['paymentUrl'];
-      if (paymentUrl != null) {
-        await launchUrl(Uri.parse(paymentUrl), mode: LaunchMode.externalApplication);
+      if (paymentUrl == null) {
+        throw Exception('No payment link returned by the server.');
+      }
+      final launched = await launchUrl(
+        Uri.parse(paymentUrl),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        throw Exception('Could not open the payment page.');
       }
 
       // Send notification to driver
