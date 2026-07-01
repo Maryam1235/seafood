@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/language_provider.dart';
+import '../services/api_service.dart';
 import 'delivery_selection_screen.dart';
 
 class OrdersScreen extends StatefulWidget {
@@ -1157,61 +1158,57 @@ class _OrderDetailSheet extends StatelessWidget {
                     const SizedBox(height: 16),
                   ],
 
-                  // ── Payment instructions ───────────────────────────
-                  _sectionTitle(
-                    lang.isSwahili
-                        ? 'Maelekezo ya Malipo'
-                        : 'Payment Instructions',
-                  ),
-                  // Fetch each seller's payment info
-                  ...sellerIds.map(
-                    (sellerId) => _SellerPaymentCard(
-                      sellerId: sellerId,
-                      lang: lang,
-                      amountForSeller: items
-                          .where((i) => i['sellerId'] == sellerId)
-                          .fold<double>(
-                            0,
-                            (acc, i) =>
-                                acc +
-                                ((i['price'] ?? 0) * (i['quantity'] ?? 1)),
+                  // ── Confirm Receipt ───────────────────────────
+                  if ((status == 'confirmed' || status == 'delivered') && order['customerConfirmedReceipt'] != true)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      child: SizedBox(
+                        width: double.infinity,
+                        height: 54,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
                           ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Payment note
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.amber.shade200),
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          color: Colors.amber.shade700,
-                          size: 18,
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
+                          onPressed: () async {
+                            try {
+                              showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (_) => const Center(child: CircularProgressIndicator()),
+                              );
+                              await ApiService.post('/payments/release', {
+                                'orderId': orderId,
+                              });
+                              if (context.mounted) {
+                                Navigator.pop(context); // pop loading
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Payment released successfully!')),
+                                );
+                                Navigator.pop(context); // pop bottom sheet
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                Navigator.pop(context); // pop loading
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Error: $e')),
+                                );
+                              }
+                            }
+                          },
                           child: Text(
-                            lang.isSwahili
-                                ? 'Tuma pesa kwa muuzaji kupitia nambari ya simu iliyoonyeshwa. Tumia jina la agizo kama kumbukumbu ya malipo.'
-                                : 'Send payment to the seller via the mobile number shown above. Use the order number as your payment reference.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.amber.shade900,
-                              height: 1.5,
+                            lang.isSwahili ? 'Thibitisha Kupokea' : 'Confirm Receipt',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
                             ),
                           ),
                         ),
-                      ],
+                      ),
                     ),
-                  ),
                   const SizedBox(height: 24),
                 ],
               ),

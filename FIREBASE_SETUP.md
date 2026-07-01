@@ -1,5 +1,11 @@
 # Firebase Setup Instructions
 
+> **Server logic moved off Cloud Functions.** ClickPesa payments and push-notification
+> sending are no longer in `functions/` (which needed the paid Blaze plan). They now run
+> in the self-hosted NestJS server at **`seafood-api/`** — see `seafood-api/README.md`.
+> Firestore, Auth, and FCM remain on the free Spark plan. The `functions/` folder is
+> retained for history but is no longer deployed.
+
 ## Step 1: Create Firebase Project
 
 1. Go to [Firebase Console](https://console.firebase.google.com/)

@@ -5,7 +5,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
 import '../services/notification_service.dart';
+import '../services/api_service.dart';
 import 'customer_dashboard.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class DeliverySelectionScreen extends StatefulWidget {
   final String orderId;
@@ -149,8 +151,17 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
               'requestedAt': FieldValue.serverTimestamp(),
             },
             'grandTotal': widget.orderTotal + cost,
-            'status': 'confirmed',
           });
+
+      // Call ClickPesa Pay-In endpoint on the NestJS backend
+      final results = await ApiService.post('/payments/create', {
+        'orderId': widget.orderId,
+      });
+
+      final paymentUrl = results['paymentUrl'];
+      if (paymentUrl != null) {
+        await launchUrl(Uri.parse(paymentUrl), mode: LaunchMode.externalApplication);
+      }
 
       // Send notification to driver
       final customerDoc = await FirebaseFirestore.instance
@@ -179,7 +190,7 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
         );
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Driver assigned! Your order is on the way.'),
+            content: Text('Payment link opened! Complete the payment to confirm the order.'),
             backgroundColor: Colors.green,
           ),
         );

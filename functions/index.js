@@ -17,9 +17,13 @@
  */
 
 const { onDocumentCreated, onDocumentUpdated } = require('firebase-functions/v2/firestore');
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { onRequest } = require('firebase-functions/v2/https');
+const { defineSecret } = require('firebase-functions/params');
 const { initializeApp }  = require('firebase-admin/app');
 const { getFirestore }   = require('firebase-admin/firestore');
 const { getMessaging }   = require('firebase-admin/messaging');
+const axios = require('axios');
 
 initializeApp();  // Uses the service account automatically — no key in code
 
@@ -281,5 +285,302 @@ exports.onOrderUpdated = onDocumentUpdated(
         data: { orderId, type: 'new_delivery', vehicleType, customerName },
       });
     }
+  }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CLICKPESA INTEGRATION
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ClickPesa credentials — stored in Google Secret Manager, never in source.
+//   Set them with:
+//     firebase functions:secrets:set CLICKPESA_CLIENT_ID
+//     firebase functions:secrets:set CLICKPESA_API_KEY
+//     firebase functions:secrets:set CLICKPESA_WEBHOOK_SECRET   (optional, see webhook)
+const CLICKPESA_CLIENT_ID     = defineSecret('CLICKPESA_CLIENT_ID');
+const CLICKPESA_API_KEY       = defineSecret('CLICKPESA_API_KEY');
+const CLICKPESA_WEBHOOK_SECRET = defineSecret('CLICKPESA_WEBHOOK_SECRET');
+
+const CLICKPESA_API_URL = 'https://api.clickpesa.com/third-parties';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ClickPesa auth — exchange client-id + api-key for a short-lived JWT.
+// The token is valid ~1 hour, so we cache it in memory across warm invocations
+// and refresh a minute before expiry.
+// https://docs.clickpesa.com/api-reference/authorization/generate-token
+// ─────────────────────────────────────────────────────────────────────────────
+let cachedToken = null;      // { value, expiresAt }
+
+async function getClickPesaToken() {
+  const now = Date.now();
+  if (cachedToken && cachedToken.expiresAt > now) {
+    return cachedToken.value;
+  }
+
+  const res = await axios.post(
+    `${CLICKPESA_API_URL}/generate-token`,
+    {},
+    {
+      headers: {
+        'client-id': CLICKPESA_CLIENT_ID.value(),
+        'api-key': CLICKPESA_API_KEY.value(),
+      },
+    }
+  );
+
+  const token = res.data?.token;
+  if (!res.data?.success || !token) {
+    throw new Error(`ClickPesa token generation failed: ${JSON.stringify(res.data)}`);
+  }
+
+  // Token lives ~1h; cache for 55 min to stay safely inside the window.
+  cachedToken = { value: token, expiresAt: now + 55 * 60 * 1000 };
+  return token;
+}
+
+// Build authorized headers for a ClickPesa API call.
+async function clickPesaAuthHeaders() {
+  const token = await getClickPesaToken();
+  return {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  };
+}
+
+const CLICKPESA_SECRETS = [CLICKPESA_CLIENT_ID, CLICKPESA_API_KEY];
+
+/**
+ * 1. createClickPesaPayment (Pay-In)
+ * Called by the Customer from the Flutter App to initiate a payment.
+ * Uses ClickPesa Hosted Checkout Link generation.
+ */
+exports.createClickPesaPayment = onCall(
+  { region: 'us-central1', secrets: CLICKPESA_SECRETS },
+  async (request) => {
+    const { orderId } = request.data;
+    const uid = request.auth?.uid;
+
+    if (!uid || !orderId) {
+      throw new HttpsError('invalid-argument', 'Missing uid or orderId');
+    }
+
+    // Get Order details
+    const orderRef = db.collection('orders').doc(orderId);
+    const orderSnap = await orderRef.get();
+    if (!orderSnap.exists) {
+      throw new HttpsError('not-found', 'Order not found');
+    }
+
+    const order = orderSnap.data();
+    if (order.customerId !== uid) {
+      throw new HttpsError('permission-denied', 'Not your order');
+    }
+
+    // Call ClickPesa API to create a checkout link
+    // https://docs.clickpesa.com/api-reference/collection/generate-checkout-link/generate-checkout-link
+    const payload = {
+      totalPrice: String(order.grandTotal), // ClickPesa expects string for checkout
+      orderReference: orderId,               // Our order ID
+      orderCurrency: 'TZS',
+      description: `ZanSeaFood Order ${orderId}`,
+      customerName: order.customerName || 'ZanSeaFood Customer',
+    };
+
+    // Add phone if available (ClickPesa requires no plus sign)
+    if (order.phoneNumber) {
+      payload.customerPhone = order.phoneNumber.replace('+', '');
+    }
+
+    let paymentUrl;
+    try {
+      const headers = await clickPesaAuthHeaders();
+      const response = await axios.post(
+        `${CLICKPESA_API_URL}/checkout-link/generate-checkout-url`,
+        payload,
+        { headers }
+      );
+      paymentUrl = response.data?.checkoutLink;
+    } catch (apiErr) {
+      console.error('ClickPesa checkout-link error:', apiErr.response?.data || apiErr.message);
+      throw new HttpsError('unavailable', 'Could not reach the payment provider. Please try again.');
+    }
+
+    if (!paymentUrl) {
+      throw new HttpsError('internal', 'Payment provider did not return a checkout link.');
+    }
+
+    // Mark the order as awaiting payment. It only moves to escrow once the
+    // ClickPesa webhook confirms the money was actually received.
+    await orderRef.update({
+      paymentMethod: 'clickpesa',
+      paymentStatus: 'pending',
+    });
+
+    return { success: true, paymentUrl };
+  }
+);
+
+/**
+ * 2. clickPesaWebhook
+ * Receives Webhook from ClickPesa when the payment status changes.
+ * Only a verified SUCCESS moves the order into escrow.
+ *
+ * Security: ClickPesa signs webhooks. Set CLICKPESA_WEBHOOK_SECRET and this
+ * function rejects any request that does not carry the matching secret in the
+ * `x-webhook-secret` header (configure the header in your ClickPesa dashboard).
+ * If no secret is configured the request is refused outright — fail closed.
+ */
+exports.clickPesaWebhook = onRequest(
+  { region: 'us-central1', secrets: [CLICKPESA_WEBHOOK_SECRET] },
+  async (req, res) => {
+    const expectedSecret = CLICKPESA_WEBHOOK_SECRET.value();
+    const providedSecret = req.get('x-webhook-secret');
+
+    if (!expectedSecret || providedSecret !== expectedSecret) {
+      console.warn('clickPesaWebhook: rejected unverified request');
+      return res.status(401).send('Unauthorized');
+    }
+
+    const data = req.body || {};
+    const orderId = data.orderReference || data.reference;
+    const status = data.status; // e.g. 'SUCCESS', 'FAILED'
+
+    if (!orderId) {
+      return res.status(400).send('No order reference provided');
+    }
+
+    try {
+      const orderRef = db.collection('orders').doc(orderId);
+      const orderSnap = await orderRef.get();
+      if (!orderSnap.exists) {
+        console.warn(`clickPesaWebhook: order ${orderId} not found`);
+        return res.status(404).send('Order not found');
+      }
+
+      const normalized = String(status || '').toUpperCase();
+      if (normalized === 'SUCCESS' || normalized === 'COMPLETED' || normalized === 'SUCCESSFUL') {
+        // Idempotent: don't reprocess an order already in/through escrow.
+        const current = orderSnap.data().paymentStatus;
+        if (current !== 'held_in_escrow' && current !== 'released') {
+          await orderRef.update({
+            paymentStatus: 'held_in_escrow',
+            status: 'confirmed', // Confirm order so the seller/driver can proceed
+            clickPesaPayInRef: data.id || data.transactionId || data.transaction_id || null,
+          });
+        }
+      } else {
+        await orderRef.update({ paymentStatus: 'failed' });
+      }
+
+      res.status(200).send('OK');
+    } catch (error) {
+      console.error('Webhook processing error:', error);
+      res.status(500).send('Internal Server Error');
+    }
+  }
+);
+
+/**
+ * 3. releaseEscrow (Pay-Out)
+ * Called when the Customer clicks "Confirm Receipt" in the app.
+ * Triggers mobile money payouts to the Seller (for food) and the Driver (for delivery).
+ * The order is only marked 'released' if every required payout actually succeeds.
+ */
+exports.releaseEscrow = onCall(
+  { region: 'us-central1', secrets: CLICKPESA_SECRETS },
+  async (request) => {
+    const { orderId } = request.data;
+    const uid = request.auth?.uid;
+
+    if (!uid || !orderId) {
+      throw new HttpsError('invalid-argument', 'Missing uid or orderId');
+    }
+
+    const orderRef = db.collection('orders').doc(orderId);
+    const orderSnap = await orderRef.get();
+
+    if (!orderSnap.exists) {
+      throw new HttpsError('not-found', 'Order not found');
+    }
+
+    const order = orderSnap.data();
+    if (order.customerId !== uid) {
+      throw new HttpsError('permission-denied', 'Not your order');
+    }
+
+    if (order.paymentStatus !== 'held_in_escrow') {
+      throw new HttpsError('failed-precondition', 'Payment is not in escrow');
+    }
+
+    // Calculate payouts
+    const productTotal = order.total || 0;
+    const deliveryFee = order.delivery?.cost || 0;
+
+    // We need to know who to pay
+    const sellerId = order.items?.[0]?.sellerId; // Assuming 1 seller per order for simplicity
+    const driverId = order.delivery?.driverId;
+
+    // Process an individual Mobile Money Payout. Returns true on success.
+    // Throws if the recipient has no payout phone on file, so we don't
+    // silently skip paying someone who is owed money.
+    // https://docs.clickpesa.com/api-reference/disbursement/mno-payout/create-mno-payout
+    const processPayout = async (userId, amount, referenceSuffix) => {
+      if (!userId || amount <= 0) return; // nothing owed to this party
+
+      const userSnap = await db.collection('users').doc(userId).get();
+      const payoutDetails = userSnap.data()?.payoutDetails;
+      const mobilePayment = userSnap.data()?.mobilePayment;
+      let phone = payoutDetails?.accountNumber || mobilePayment;
+
+      if (!phone) {
+        throw new HttpsError(
+          'failed-precondition',
+          `Recipient (${referenceSuffix}) has no mobile-money number on file.`
+        );
+      }
+
+      phone = phone.replace('+', '');
+      const payoutPayload = {
+        amount: Number(amount), // ClickPesa expects a number for payouts
+        orderReference: `${orderId}_${referenceSuffix}`,
+        phoneNumber: phone,
+        currency: 'TZS',
+      };
+
+      const headers = await clickPesaAuthHeaders();
+      const response = await axios.post(
+        `${CLICKPESA_API_URL}/payouts/create-mobile-money-payout`,
+        payoutPayload,
+        { headers }
+      );
+      console.log(
+        `ClickPesa payout to ${referenceSuffix} (${userId}) accepted for TZS ${amount}:`,
+        response.data?.id || response.data?.status || 'OK'
+      );
+    };
+
+    try {
+      // 1. Payout to Seller
+      await processPayout(sellerId, productTotal, 'seller');
+
+      // 2. Payout to Driver
+      await processPayout(driverId, deliveryFee, 'driver');
+    } catch (error) {
+      // A payout failed — leave the funds in escrow so nothing is lost and the
+      // customer can retry / support can intervene.
+      console.error('Error releasing escrow:', error.response?.data || error.message || error);
+      if (error instanceof HttpsError) throw error;
+      throw new HttpsError('internal', 'Failed to release funds via ClickPesa. Funds remain in escrow.');
+    }
+
+    // Only now, after both payouts succeeded, mark the order complete.
+    await orderRef.update({
+      paymentStatus: 'released',
+      status: 'delivered',
+      customerConfirmedReceipt: true,
+    });
+
+    return { success: true };
   }
 );
