@@ -41,10 +41,8 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
   Future<void> _loadCustomerLocation() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
-    final doc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .get();
+    final doc =
+        await FirebaseFirestore.instance.collection('users').doc(uid).get();
     if (doc.exists && mounted) {
       setState(
         () => _customerLocation =
@@ -58,8 +56,7 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
     const R = 6371.0;
     final dLat = _rad(lat2 - lat1);
     final dLon = _rad(lon2 - lon1);
-    final a =
-        sin(dLat / 2) * sin(dLat / 2) +
+    final a = sin(dLat / 2) * sin(dLat / 2) +
         cos(_rad(lat1)) * cos(_rad(lat2)) * sin(dLon / 2) * sin(dLon / 2);
     return R * 2 * atan2(sqrt(a), sqrt(1 - a));
   }
@@ -70,13 +67,13 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
   double _ratePerKm(String v) {
     switch (v.toLowerCase()) {
       case 'bicycle':
-        return 300;
+        return 20;
       case 'motorcycle':
-        return 500;
+        return 30;
       case 'car':
-        return 800;
+        return 40;
       default:
-        return 1200; // pickup
+        return 50; // pickup
     }
   }
 
@@ -84,13 +81,13 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
   double _minCost(String v) {
     switch (v.toLowerCase()) {
       case 'bicycle':
-        return 1000;
+        return 100;
       case 'motorcycle':
-        return 2000;
+        return 150;
       case 'car':
-        return 4000;
+        return 200;
       default:
-        return 6000;
+        return 300;
     }
   }
 
@@ -141,17 +138,17 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
           .collection('orders')
           .doc(widget.orderId)
           .update({
-            'delivery': {
-              'vehicleType': driver['driverProfile']?['vehicleType'],
-              'cost': cost,
-              'driverId': _selectedDriverId,
-              'driverName': driver['fullName'] ?? driver['username'],
-              'driverPhone': driver['phone'],
-              'status': 'assigned',
-              'requestedAt': FieldValue.serverTimestamp(),
-            },
-            'grandTotal': widget.orderTotal + cost,
-          });
+        'delivery': {
+          'vehicleType': driver['driverProfile']?['vehicleType'],
+          'cost': cost,
+          'driverId': _selectedDriverId,
+          'driverName': driver['fullName'] ?? driver['username'],
+          'driverPhone': driver['phone'],
+          'status': 'assigned',
+          'requestedAt': FieldValue.serverTimestamp(),
+        },
+        'grandTotal': widget.orderTotal + cost,
+      });
 
       // Call ClickPesa Pay-In endpoint on the NestJS backend
       final results = await ApiService.post('/payments/create', {
@@ -175,8 +172,7 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
           .collection('users')
           .doc(FirebaseAuth.instance.currentUser?.uid)
           .get();
-      final customerName =
-          customerDoc.data()?['fullName'] ??
+      final customerName = customerDoc.data()?['fullName'] ??
           customerDoc.data()?['username'] ??
           'Customer';
 
@@ -197,7 +193,8 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
         );
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Payment link opened! Complete the payment to confirm the order.'),
+            content: Text(
+                'Payment link opened! Complete the payment to confirm the order.'),
             backgroundColor: Colors.green,
           ),
         );
@@ -270,7 +267,6 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
               ),
             ),
           ),
-
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16),
@@ -412,9 +408,8 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
-                                  color: selected
-                                      ? _navy
-                                      : Colors.grey.shade200,
+                                  color:
+                                      selected ? _navy : Colors.grey.shade200,
                                   width: selected ? 2 : 1,
                                 ),
                                 boxShadow: [
@@ -428,9 +423,8 @@ class _DeliverySelectionScreenState extends State<DeliverySelectionScreen> {
                                 children: [
                                   CircleAvatar(
                                     radius: 28,
-                                    backgroundColor: selected
-                                        ? _navy
-                                        : Colors.grey.shade100,
+                                    backgroundColor:
+                                        selected ? _navy : Colors.grey.shade100,
                                     child: Text(
                                       (driver['username'] ?? '?')
                                           .toString()
