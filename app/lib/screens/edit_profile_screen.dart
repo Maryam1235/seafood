@@ -38,7 +38,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       text: widget.userData['phone'] ?? '',
     );
     _mobilePaymentController = TextEditingController(
-      text: widget.userData['mobilePayment'] ?? '',
+      text: widget.userData['mobilePayment'] ?? widget.userData['phone'] ?? '',
     );
   }
 
@@ -147,13 +147,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 decoration:
                     _dec(
                       lang.isSwahili
-                          ? 'Nambari ya Malipo (M-Pesa / Airtel)'
-                          : 'Mobile Payment Number (M-Pesa / Airtel)',
+                          ? 'Nambari ya Malipo ya Simu'
+                          : 'Mobile Payment Number',
                       Icons.mobile_friendly,
                     ).copyWith(
                       helperText: lang.isSwahili
-                          ? 'Wateja watatumia nambari hii kukutumia pesa'
-                          : 'Customers will use this number to send you payment',
+                          ? 'Kwa kawaida ni nambari uliyosajili nayo, lakini unaweza kuibadilisha'
+                          : 'Defaults to your registered phone number, but you can change it',
                       helperStyle: TextStyle(
                         fontSize: 11,
                         color: Colors.grey.shade500,

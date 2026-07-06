@@ -1526,7 +1526,7 @@ class _SellerPaymentCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
 
-                    // Phone (M-Pesa / Airtel fallback)
+                    // Registered contact phone
                     if (phone.isNotEmpty)
                       _paymentRow(
                         icon: Icons.phone_android,
@@ -1545,8 +1545,8 @@ class _SellerPaymentCard extends StatelessWidget {
                       _paymentRow(
                         icon: Icons.mobile_friendly,
                         network: lang.isSwahili
-                            ? 'Nambari ya Malipo (M-Pesa / Airtel)'
-                            : 'Mobile Money (M-Pesa / Airtel)',
+                            ? 'Nambari ya Malipo ya Simu'
+                            : 'Mobile Payment Number',
                         number: mobilePayment,
                         accountName: name,
                         color: Colors.green.shade700,

@@ -27,11 +27,14 @@ class AuthService {
 
       print('User created: ${userCredential.user!.uid}');
 
+      final normalizedPhone = '+255${phone.replaceAll(RegExp(r'^0'), '')}';
+
       // Save user data to Firestore
       await _firestore.collection('users').doc(userCredential.user!.uid).set({
         'fullName': fullName,
         'username': username,
-        'phone': '+255${phone.replaceAll(RegExp(r'^0'), '')}',
+        'phone': normalizedPhone,
+        'mobilePayment': normalizedPhone,
         'email': email,
         'role': role,
         'createdAt': FieldValue.serverTimestamp(),
