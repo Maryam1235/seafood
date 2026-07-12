@@ -9,7 +9,7 @@ Python FastAPI service for item-based collaborative filtering recommendations.
 - Computes item-to-item similarity using cosine similarity.
 - Generates top-N product recommendations for each user.
 - Saves recommendations to `recommendations/{userId}` in Firestore.
-- Provides `GET /recommendations/{userId}` and `POST /train`.
+- Provides `GET /recommendations/{userId}`, `POST /train`, and `POST /events/purchase`.
 - Falls back to popular/trending available products for cold-start users.
 
 ## Firestore Collections
@@ -72,6 +72,17 @@ Train manually:
 curl -X POST http://localhost:8000/train
 ```
 
+Notify the service after a successful purchase:
+
+```bash
+curl -X POST http://localhost:8000/events/purchase \
+  -H 'Content-Type: application/json' \
+  -d '{"orderId":"ORDER_ID"}'
+```
+
+Purchase events schedule background training after `PURCHASE_TRAINING_DELAY_SECONDS`.
+Repeated purchase events inside that delay window are debounced into one training run.
+
 Train from CLI/cron:
 
 ```bash
@@ -87,8 +98,10 @@ curl http://localhost:8000/recommendations/USER_ID
 ## NestJS Integration
 
 NestJS remains responsible for payments. After ClickPesa verifies a successful
-payment, NestJS writes each purchased product into `purchase_history`. It may call
-the Python service `/events/purchase` or `/train`, but it does not run ML logic.
+payment, NestJS writes each purchased product into `purchase_history`, then calls
+the Python service `/events/purchase`. The recommendation service accepts the
+event quickly and schedules background training; it does not block the payment
+webhook while training runs.
 
 Recommended production setup:
 
