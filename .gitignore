@@ -5,6 +5,7 @@
 # Dependencies
 node_modules/
 **/node_modules/
+server-credentials.json
 
 # Python
 **/.venv/
