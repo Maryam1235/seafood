@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Secrets — NEVER commit these
+.env
+.env.*
+!.env.example
+serviceAccountKey.json
+*.pem
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store

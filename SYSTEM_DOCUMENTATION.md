@@ -27,21 +27,23 @@
 ## 1. System Overview
 
 ZanSeaFood is a **seafood marketplace app** built for Tanzania (Zanzibar).
-It has two parts:
+It is organized as a monorepo with separate deployable parts:
 
 | Part | Technology | Purpose |
 |------|-----------|---------|
 | **Mobile App** | Flutter (Dart) | Used by Customers, Sellers, and Drivers |
 | **Admin Panel** | React + Vite (JavaScript) | Used by the Administrator to manage everything |
+| **API** | NestJS (Node.js) | Handles ClickPesa payments, FCM notifications, and backend workflows |
+| **Recommendation Service** | FastAPI (Python) | Trains product recommendations from purchase history |
 
-Both parts connect to the **same Firebase project** (`testing-bc269`), so data is shared in real time.
+All runtime parts use the **same Firebase project** (`testing-bc269`), so data is shared in real time.
 
 ---
 
 ## 2. Project Structure
 
 ```
-testing/
+seafood/
 ├── app/                        ← Flutter mobile app
 │   └── lib/
 │       ├── main.dart           ← App entry point
@@ -63,19 +65,21 @@ testing/
 │           ├── driver_dashboard.dart
 │           └── ... (26 screens total)
 │
-└── react_admin/                ← React admin panel
-    └── src/
-        ├── firebase.js         ← Firebase connection config
-        ├── pages/
-        │   └── Dashboard.jsx   ← Main layout
-        └── components/
-            ├── Overview.jsx    ← Stats dashboard
-            ├── UsersTable.jsx  ← User management
-            ├── ProductsTable.jsx
-            ├── OrdersTable.jsx
-            ├── DeliveryManagement.jsx
-            ├── Reports.jsx     ← Analytics & charts
-            └── Settings.jsx
+├── react_admin/                ← React admin panel
+│   └── src/
+│       ├── firebase.js         ← Firebase connection config
+│       ├── pages/
+│       │   └── Dashboard.jsx   ← Main layout
+│       └── components/
+│           ├── Overview.jsx    ← Stats dashboard
+│           ├── UsersTable.jsx  ← User management
+│           ├── ProductsTable.jsx
+│           ├── OrdersTable.jsx
+│           ├── DeliveryManagement.jsx
+│           ├── Reports.jsx     ← Analytics & charts
+│           └── Settings.jsx
+├── seafood-api/                ← NestJS backend API
+└── recommendation-service/     ← Python FastAPI recommendation engine
 ```
 
 ---

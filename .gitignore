@@ -4,6 +4,28 @@
 
 # Dependencies
 node_modules/
+**/node_modules/
+
+# Python
+**/.venv/
+**/__pycache__/
+**/*.pyc
 
 # Build / logs
 *.log
+**/dist/
+**/build/
+
+# Secrets
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+serviceAccountKey.json
+**/serviceAccountKey.json
+service_account.json
+**/service_account.json
+*.pem
+**/*.pem
