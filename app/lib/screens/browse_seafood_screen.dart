@@ -283,6 +283,8 @@ class _BrowseSeafoodScreenState extends State<BrowseSeafoodScreen> {
             ),
           ),
 
+          SliverToBoxAdapter(child: _RecommendedProductsSection(lang: lang)),
+
           // Products
           StreamBuilder<QuerySnapshot>(
             stream: FirebaseFirestore.instance
@@ -385,6 +387,225 @@ class _BrowseSeafoodScreenState extends State<BrowseSeafoodScreen> {
     _searchController.dispose();
     super.dispose();
   }
+}
+
+class _RecommendedProductsSection extends StatelessWidget {
+  final LanguageProvider lang;
+  const _RecommendedProductsSection({required this.lang});
+
+  static const _navy = Color(0xFF1E1B4B);
+
+  Future<List<Map<String, dynamic>>> _loadRecommendedProducts(
+    String userId,
+    List<dynamic> recommendationItems,
+  ) async {
+    final recommendedIds = recommendationItems
+        .whereType<Map>()
+        .map((item) => item['productId']?.toString())
+        .whereType<String>()
+        .toList();
+    if (recommendedIds.isEmpty) return [];
+
+    final purchasedSnap = await FirebaseFirestore.instance
+        .collection('purchase_history')
+        .where('userId', isEqualTo: userId)
+        .get();
+    final purchasedIds = purchasedSnap.docs
+        .map((doc) => doc.data()['productId']?.toString())
+        .whereType<String>()
+        .toSet();
+
+    final products = <Map<String, dynamic>>[];
+    for (final productId in recommendedIds.take(10)) {
+      final productSnap = await FirebaseFirestore.instance
+          .collection('products')
+          .doc(productId)
+          .get();
+      if (!productSnap.exists) continue;
+
+      final product = {
+        'id': productSnap.id,
+        ...productSnap.data() as Map<String, dynamic>,
+      };
+      final stock = (product['stock'] ?? 0) as num;
+      final repeatBuy = product['repeatBuy'] == true;
+      if (product['isAvailable'] == false || stock <= 0) continue;
+      if (purchasedIds.contains(productId) && !repeatBuy) continue;
+      products.add(product);
+    }
+    return products;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return const SizedBox.shrink();
+
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('recommendations')
+          .doc(userId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        final data = snapshot.data?.data() as Map<String, dynamic>?;
+        final items = (data?['items'] as List?) ?? [];
+        if (items.isEmpty) return const SizedBox.shrink();
+
+        return FutureBuilder<List<Map<String, dynamic>>>(
+          future: _loadRecommendedProducts(userId, items),
+          builder: (context, productSnap) {
+            final products = productSnap.data ?? [];
+            if (products.isEmpty) return const SizedBox.shrink();
+
+            return Container(
+              color: const Color(0xFFF5F6FA),
+              padding: const EdgeInsets.fromLTRB(16, 16, 0, 4),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 16),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.auto_awesome, color: _navy, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          lang.isSwahili
+                              ? 'Mapendekezo Kwako'
+                              : 'Recommended For You',
+                          style: const TextStyle(
+                            color: _navy,
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    height: 210,
+                    child: ListView.separated(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: products.length,
+                      separatorBuilder: (_, __) => const SizedBox(width: 12),
+                      itemBuilder: (context, index) => _RecommendedProductCard(
+                        product: products[index],
+                        lang: lang,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _RecommendedProductCard extends StatelessWidget {
+  final Map<String, dynamic> product;
+  final LanguageProvider lang;
+  const _RecommendedProductCard({required this.product, required this.lang});
+
+  static const _navy = Color(0xFF1E1B4B);
+
+  @override
+  Widget build(BuildContext context) {
+    final imageUrl = product['imageUrl'];
+    final name = product['name'] ?? '';
+    final price = product['price'];
+    final unit = product['unit'] ?? 'kg';
+    final category = product['category'] ?? '';
+
+    return GestureDetector(
+      onTap: () => showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => _ProductDetailSheet(
+          product: product,
+          lang: lang,
+          rootContext: context,
+        ),
+      ),
+      child: Container(
+        width: 150,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.shade200,
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+              child: imageUrl != null
+                  ? Image.network(
+                      imageUrl,
+                      height: 105,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _placeholder(),
+                    )
+                  : _placeholder(),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF111827),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    lang.t(category.isNotEmpty ? category : 'cat_other'),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'TShs ${price?.toStringAsFixed(0) ?? '0'} / $unit',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: _navy,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _placeholder() => Container(
+    height: 105,
+    width: double.infinity,
+    color: Colors.grey.shade100,
+    child: Icon(Icons.set_meal, size: 34, color: Colors.grey.shade300),
+  );
 }
 
 class _ProductCard extends StatelessWidget {
