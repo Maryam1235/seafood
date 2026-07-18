@@ -78,23 +78,45 @@ processes.
    rec doc is missing or all items are unavailable, Flutter falls back to
    available products so the section is not blank.
 
-## Collaborative Filtering
+## Hybrid model (CF + content + popularity)
 
-The service uses item-based collaborative filtering:
+The service uses a **hybrid recommender**, closer to professional e-commerce stacks
+than pure purchase CF alone:
 
-1. Build a user-product matrix from purchase quantities.
-2. Treat each product as a vector of user interactions.
-3. Calculate product-to-product cosine similarity.
-4. For each user, recommend products similar to products they already bought.
-5. Exclude already purchased products unless the product has `repeatBuy: true`.
+1. **Signals**
+   - Purchases (`purchase_history`) — weight 5
+   - Add to cart (`user_interactions`, type `add_to_cart`) — weight 3.5
+   - Clicks (`click`) — weight 2
+   - Views (`view`) — weight 1
+2. **Collaborative filtering** — item–item cosine similarity on the combined
+   implicit-feedback matrix.
+3. **Content affinity** — boost products in categories the user bought/viewed
+   (and `preferredCategory` / `categoryPreference` on the user profile).
+4. **Popularity prior** — products with more purchases/interactions rank higher
+   when personal signal is weak.
+5. **Hybrid score** (configurable via env):
+
+   ```text
+   score = W_CF * cf + W_CONTENT * content + W_POP * popularity
+   ```
+
+   Defaults: `W_CF=0.45`, `W_CONTENT=0.35`, `W_POP=0.20`.
+
+6. Exclude already-interacted products unless `repeatBuy: true`.
+7. Always fall back to available catalog products so the UI is never empty.
+
+Flutter logs interactions via `RecommendationEventService` into
+`user_interactions`. Training also runs after purchase events and (debounced)
+interaction events.
 
 ## Cold Start
 
-If a user has no purchase history, the service recommends:
+If a user has little or no history, the service still recommends:
 
-- popular products from purchase history
+- popular products (purchases + interactions)
+- same-category products when a preference is known
 - available products with stock
-- products matching `users/{uid}.preferredCategory` or `categoryPreference` when present
+- products matching `users/{uid}.preferredCategory` or `categoryPreference`
 
 ## Evaluation
 

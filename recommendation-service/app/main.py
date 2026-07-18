@@ -14,11 +14,12 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="ZanSeaFood Recommendation Service", version="1.0.0")
+app = FastAPI(title="ZanSeaFood Recommendation Service", version="1.1.0")
 engine = RecommendationEngine(get_db())
 scheduler = BackgroundScheduler()
 training_lock = Lock()
 PURCHASE_TRAINING_JOB_ID = "purchase_event_training"
+INTERACTION_TRAINING_JOB_ID = "interaction_event_training"
 
 
 @app.on_event("startup")
@@ -61,6 +62,31 @@ def purchase_event(payload: dict) -> dict[str, str]:
         id=PURCHASE_TRAINING_JOB_ID,
         run_date=run_date,
         args=["purchase_event"],
+        replace_existing=True,
+    )
+    _ensure_scheduler_running()
+    return {"status": "accepted", "training": "scheduled"}
+
+
+@app.post("/events/interaction")
+def interaction_event(payload: dict) -> dict[str, str]:
+    """
+    Optional hook after the app writes user_interactions to Firestore.
+    Debounces training so browse traffic does not retrain on every click.
+    """
+    logger.info(
+        "Interaction event received: type=%s user=%s",
+        payload.get("type", "unknown"),
+        payload.get("userId", "unknown"),
+    )
+    delay_seconds = int(os.getenv("INTERACTION_TRAINING_DELAY_SECONDS", "600"))
+    run_date = datetime.now() + timedelta(seconds=delay_seconds)
+    scheduler.add_job(
+        _run_training_job,
+        "date",
+        id=INTERACTION_TRAINING_JOB_ID,
+        run_date=run_date,
+        args=["interaction_event"],
         replace_existing=True,
     )
     _ensure_scheduler_running()

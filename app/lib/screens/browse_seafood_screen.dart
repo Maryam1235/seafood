@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
 import '../services/auth_service.dart';
 import '../services/cart_service.dart';
+import '../services/recommendation_event_service.dart';
 import 'login_screen.dart';
 import 'cart_screen.dart';
 
@@ -568,16 +569,20 @@ class _RecommendedProductCard extends StatelessWidget {
     final category = product['category'] ?? '';
 
     return GestureDetector(
-      onTap: () => showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (_) => _ProductDetailSheet(
-          product: product,
-          lang: lang,
-          rootContext: context,
-        ),
-      ),
+      onTap: () {
+        RecommendationEventService.logClick(product);
+        RecommendationEventService.logView(product);
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (_) => _ProductDetailSheet(
+            product: product,
+            lang: lang,
+            rootContext: context,
+          ),
+        );
+      },
       child: Container(
         width: 150,
         decoration: BoxDecoration(
@@ -673,16 +678,20 @@ class _ProductCard extends StatelessWidget {
     final category = product['category'] ?? '';
 
     return GestureDetector(
-      onTap: () => showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (_) => _ProductDetailSheet(
-          product: product,
-          lang: lang,
-          rootContext: context,
-        ),
-      ),
+      onTap: () {
+        RecommendationEventService.logClick(product);
+        RecommendationEventService.logView(product);
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (_) => _ProductDetailSheet(
+            product: product,
+            lang: lang,
+            rootContext: context,
+          ),
+        );
+      },
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -1059,6 +1068,7 @@ class _ProductDetailSheet extends StatelessWidget {
                       onPressed: () async {
                         try {
                           await CartService().addToCart(product);
+                          RecommendationEventService.logAddToCart(product);
                           if (context.mounted) {
                             Navigator.pop(context);
                             final nav = Navigator.of(rootContext);
