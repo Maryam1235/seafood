@@ -91,7 +91,9 @@ Keep one GitHub repo for project tracking, but deploy services independently:
 | Admin panel hosting | `react_admin/` |
 | Mobile app builds | `app/` |
 
-`seafood-api` can notify the recommendation service using `RECOMMENDATION_SERVICE_URL`.
+`seafood-api` notifies the recommendation service using `RECOMMENDATION_SERVICE_URL`
+after writing `purchase_history` (ClickPesa webhook **or** authenticated
+`POST /recommendations/record-purchase` used for pickup orders).
 
 ## Security Notes
 

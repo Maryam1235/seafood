@@ -63,14 +63,20 @@ processes.
 
 ## Training Flow
 
-1. Customer pays using ClickPesa.
-2. ClickPesa webhook reaches NestJS.
-3. NestJS verifies payment status directly with ClickPesa.
-4. If payment is `SUCCESS` or `SETTLED`, NestJS marks the order as confirmed.
-5. NestJS writes each purchased product to `purchase_history`.
-6. Python service trains daily, or manually through `POST /train`.
-7. Python service writes top recommendations to Firestore.
-8. Flutter reads Firestore and displays recommended seafood products.
+1. Customer places an order (delivery + ClickPesa, or free pickup).
+2. **Delivery path:** ClickPesa webhook reaches NestJS → payment verified →
+   order confirmed → NestJS writes `purchase_history`.
+3. **Pickup path:** Flutter confirms pickup, then calls NestJS
+   `POST /recommendations/record-purchase` so `purchase_history` is written
+   even without ClickPesa.
+4. NestJS notifies the Python service (`POST /events/purchase`) when
+   `RECOMMENDATION_SERVICE_URL` is set.
+5. Python trains on startup, daily, after purchase events, or via `POST /train`.
+6. Python writes top recommendations to `recommendations/{userId}` for
+   purchasers **and** other customers (cold start / popular / catalog fill).
+7. Flutter reads Firestore and displays recommended seafood products. If the
+   rec doc is missing or all items are unavailable, Flutter falls back to
+   available products so the section is not blank.
 
 ## Collaborative Filtering
 
@@ -104,6 +110,16 @@ Each training run writes a document to `recommendation_training_logs` with:
 The current evaluation uses a simple leave-last-purchase-out method.
 
 ## API
+
+NestJS (`seafood-api`, authenticated with Firebase ID token):
+
+```http
+POST /recommendations/record-purchase
+Body: { "orderId": "..." }
+```
+
+Records `purchase_history` for a confirmed / pickup order owned by the caller,
+then notifies the Python service.
 
 Python service:
 

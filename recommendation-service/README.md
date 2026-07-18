@@ -97,11 +97,19 @@ curl http://localhost:8000/recommendations/USER_ID
 
 ## NestJS Integration
 
-NestJS remains responsible for payments. After ClickPesa verifies a successful
-payment, NestJS writes each purchased product into `purchase_history`, then calls
-the Python service `/events/purchase`. The recommendation service accepts the
-event quickly and schedules background training; it does not block the payment
-webhook while training runs.
+NestJS remains responsible for payments **and** for recording purchase history
+on pickup. After ClickPesa verifies a successful payment (or the app calls
+`POST /recommendations/record-purchase` for pickup), NestJS writes each purchased
+product into `purchase_history`, then calls the Python service `/events/purchase`.
+The recommendation service accepts the event quickly and schedules background
+training; it does not block the payment webhook while training runs.
+
+Set on NestJS:
+
+```bash
+RECOMMENDATION_SERVICE_URL=http://localhost:8000
+# production example: https://recommendations.arifa.org
+```
 
 Recommended production setup:
 

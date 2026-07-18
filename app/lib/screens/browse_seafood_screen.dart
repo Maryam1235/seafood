@@ -395,28 +395,28 @@ class _RecommendedProductsSection extends StatelessWidget {
 
   static const _navy = Color(0xFF1E1B4B);
 
-  Future<List<Map<String, dynamic>>> _loadRecommendedProducts(
-    String userId,
-    List<dynamic> recommendationItems,
-  ) async {
-    final recommendedIds = recommendationItems
-        .whereType<Map>()
-        .map((item) => item['productId']?.toString())
-        .whereType<String>()
-        .toList();
-    if (recommendedIds.isEmpty) return [];
-
+  Future<Set<String>> _purchasedProductIds(String userId) async {
     final purchasedSnap = await FirebaseFirestore.instance
         .collection('purchase_history')
         .where('userId', isEqualTo: userId)
         .get();
-    final purchasedIds = purchasedSnap.docs
+    return purchasedSnap.docs
         .map((doc) => doc.data()['productId']?.toString())
         .whereType<String>()
         .toSet();
+  }
 
+  bool _isSellable(Map<String, dynamic> product) {
+    final stock = (product['stock'] ?? 0) as num;
+    return product['isAvailable'] != false && stock > 0;
+  }
+
+  Future<List<Map<String, dynamic>>> _loadProductsByIds(
+    List<String> productIds,
+    Set<String> purchasedIds,
+  ) async {
     final products = <Map<String, dynamic>>[];
-    for (final productId in recommendedIds.take(10)) {
+    for (final productId in productIds.take(10)) {
       final productSnap = await FirebaseFirestore.instance
           .collection('products')
           .doc(productId)
@@ -427,13 +427,56 @@ class _RecommendedProductsSection extends StatelessWidget {
         'id': productSnap.id,
         ...productSnap.data() as Map<String, dynamic>,
       };
-      final stock = (product['stock'] ?? 0) as num;
       final repeatBuy = product['repeatBuy'] == true;
-      if (product['isAvailable'] == false || stock <= 0) continue;
+      if (!_isSellable(product)) continue;
       if (purchasedIds.contains(productId) && !repeatBuy) continue;
       products.add(product);
     }
     return products;
+  }
+
+  /// When no recommendation doc (or all recs filtered out), show available products.
+  Future<List<Map<String, dynamic>>> _loadPopularFallback(
+    Set<String> purchasedIds,
+  ) async {
+    final snap = await FirebaseFirestore.instance
+        .collection('products')
+        .where('isAvailable', isEqualTo: true)
+        .limit(20)
+        .get();
+
+    final products = <Map<String, dynamic>>[];
+    for (final doc in snap.docs) {
+      final product = {'id': doc.id, ...doc.data()};
+      final stock = (product['stock'] ?? 0) as num;
+      final repeatBuy = product['repeatBuy'] == true;
+      if (stock <= 0) continue;
+      if (purchasedIds.contains(doc.id) && !repeatBuy) continue;
+      products.add(product);
+      if (products.length >= 10) break;
+    }
+    return products;
+  }
+
+  Future<List<Map<String, dynamic>>> _loadRecommendedProducts(
+    String userId,
+    List<dynamic> recommendationItems,
+  ) async {
+    final purchasedIds = await _purchasedProductIds(userId);
+
+    final recommendedIds = recommendationItems
+        .whereType<Map>()
+        .map((item) => item['productId']?.toString())
+        .whereType<String>()
+        .toList();
+
+    if (recommendedIds.isNotEmpty) {
+      final products = await _loadProductsByIds(recommendedIds, purchasedIds);
+      if (products.isNotEmpty) return products;
+    }
+
+    // Cold-start / empty recs / all recs out of stock → popular available products.
+    return _loadPopularFallback(purchasedIds);
   }
 
   @override
@@ -449,11 +492,15 @@ class _RecommendedProductsSection extends StatelessWidget {
       builder: (context, snapshot) {
         final data = snapshot.data?.data() as Map<String, dynamic>?;
         final items = (data?['items'] as List?) ?? [];
-        if (items.isEmpty) return const SizedBox.shrink();
 
         return FutureBuilder<List<Map<String, dynamic>>>(
+          // Include item count in future identity so Stream updates re-fetch.
           future: _loadRecommendedProducts(userId, items),
           builder: (context, productSnap) {
+            if (productSnap.connectionState == ConnectionState.waiting &&
+                !productSnap.hasData) {
+              return const SizedBox.shrink();
+            }
             final products = productSnap.data ?? [];
             if (products.isEmpty) return const SizedBox.shrink();
 

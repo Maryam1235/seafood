@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { FirebaseModule } from './firebase/firebase.module';
 import { ClickPesaModule } from './clickpesa/clickpesa.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { RecommendationsModule } from './recommendations/recommendations.module';
 import { PagesController } from './pages/pages.controller';
 
 @Module({
@@ -11,6 +12,7 @@ import { PagesController } from './pages/pages.controller';
     FirebaseModule,
     ClickPesaModule,
     NotificationsModule,
+    RecommendationsModule,
   ],
   controllers: [PagesController],
 })

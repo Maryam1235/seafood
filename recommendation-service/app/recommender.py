@@ -10,6 +10,9 @@ from firebase_admin import firestore
 
 logger = logging.getLogger(__name__)
 
+# Firestore allows max 500 ops per batch; keep a margin.
+_BATCH_LIMIT = 400
+
 
 class RecommendationEngine:
     def __init__(self, db: firestore.Client):
@@ -20,16 +23,19 @@ class RecommendationEngine:
     def train(self) -> dict[str, Any]:
         purchases = self._load_purchase_history()
         products = self._load_products()
-        users = sorted({p["userId"] for p in purchases if p.get("userId")})
+        purchaser_ids = sorted({p["userId"] for p in purchases if p.get("userId")})
+        customer_ids = self._load_customer_ids()
+        # Train for everyone who bought something, plus other customers (cold start).
+        users = sorted(set(purchaser_ids) | set(customer_ids))
 
-        if not purchases:
-            self._save_training_log(0, 0, 0, "no_purchase_history")
+        if not products:
+            self._save_training_log(len(purchases), len(users), 0, "no_available_products")
             return {
                 "status": "ok",
-                "message": "No purchase history found.",
-                "purchases": 0,
-                "users": 0,
-                "products": len(products),
+                "message": "No available products found.",
+                "purchases": len(purchases),
+                "users": len(users),
+                "products": 0,
             }
 
         matrix, user_index, product_index = self._build_user_product_matrix(
@@ -40,7 +46,9 @@ class RecommendationEngine:
         popular = self._popular_products(purchases, products)
 
         batch = self.db.batch()
+        ops = 0
         generated = 0
+
         for user_id in users:
             recommendations = self._recommend_for_user(
                 user_id=user_id,
@@ -52,10 +60,29 @@ class RecommendationEngine:
                 similarity=similarity,
                 popular=popular,
             )
-            self._set_recommendation_doc(batch, user_id, recommendations)
+            # Never write empty docs — catalog fallback guarantees items when stock exists.
+            if not recommendations:
+                recommendations = self._catalog_fallback(
+                    products,
+                    exclude=set(),
+                    limit=self.top_n,
+                )
+            source = (
+                "collaborative_filtering"
+                if user_id in user_index
+                else "cold_start"
+            )
+            self._set_recommendation_doc(batch, user_id, recommendations, source=source)
             generated += 1
+            ops += 1
+            if ops >= _BATCH_LIMIT:
+                batch.commit()
+                batch = self.db.batch()
+                ops = 0
 
-        self._commit(batch)
+        if ops > 0:
+            batch.commit()
+
         metrics = self.evaluate(purchases, products)
         self._save_training_log(len(purchases), len(users), generated, "trained", metrics)
         logger.info(
@@ -77,11 +104,13 @@ class RecommendationEngine:
         doc = self.db.collection("recommendations").document(user_id).get()
         if doc.exists:
             data = doc.to_dict() or {}
-            return {
-                "userId": user_id,
-                "recommendations": data.get("items", []),
-                "source": data.get("source", "collaborative_filtering"),
-            }
+            items = data.get("items") or []
+            if items:
+                return {
+                    "userId": user_id,
+                    "recommendations": items,
+                    "source": data.get("source", "collaborative_filtering"),
+                }
 
         purchases = self._load_purchase_history()
         products = self._load_products()
@@ -115,6 +144,27 @@ class RecommendationEngine:
                 continue
             products[doc.id] = {"id": doc.id, **data}
         return products
+
+    def _load_customer_ids(self) -> list[str]:
+        """Customers who should receive cold-start recommendations even without purchases."""
+        ids: list[str] = []
+        try:
+            docs = (
+                self.db.collection("users")
+                .where("role", "==", "customer")
+                .stream()
+            )
+            for doc in docs:
+                ids.append(doc.id)
+        except Exception:
+            # Missing index / empty collection — fall back to all users and filter client-side.
+            logger.warning("Could not query users by role; loading all users for cold start")
+            for doc in self.db.collection("users").stream():
+                data = doc.to_dict() or {}
+                role = (data.get("role") or "customer").lower()
+                if role == "customer":
+                    ids.append(doc.id)
+        return ids
 
     def _build_user_product_matrix(
         self,
@@ -197,8 +247,10 @@ class RecommendationEngine:
             )
 
         scored.sort(key=lambda item: item["score"], reverse=True)
+        seen = {item["productId"] for item in scored}
+
+        # Fill with popular (purchase-based + catalog-padded).
         if len(scored) < self.top_n:
-            seen = {item["productId"] for item in scored}
             for item in popular:
                 if item["productId"] in seen:
                     continue
@@ -209,6 +261,23 @@ class RecommendationEngine:
                 seen.add(item["productId"])
                 if len(scored) >= self.top_n:
                     break
+
+        # Final safety net: any remaining available products from catalog.
+        if len(scored) < self.top_n:
+            exclude_purchased = {
+                pid
+                for pid in purchased_product_ids
+                if not products.get(pid, {}).get("repeatBuy")
+            }
+            for item in self._catalog_fallback(
+                products,
+                exclude=seen | exclude_purchased,
+                limit=self.top_n - len(scored),
+            ):
+                if item["productId"] in seen:
+                    continue
+                scored.append(item)
+                seen.add(item["productId"])
 
         return scored[: self.top_n]
 
@@ -223,25 +292,57 @@ class RecommendationEngine:
             if product_id in products:
                 counts[product_id] += int(purchase.get("quantity") or 1)
 
+        items: list[dict[str, Any]] = []
+        seen: set[str] = set()
+
         if counts:
-            items = [
+            for product_id, quantity in counts.most_common():
+                items.append(
+                    {
+                        "productId": product_id,
+                        "score": round(math.log(quantity + 1), 6),
+                        "reason": "popular_product",
+                    }
+                )
+                seen.add(product_id)
+
+        # Always pad with other available catalog products so sparse markets
+        # still get recommendations after excluding already-purchased items.
+        for item in self._catalog_fallback(products, exclude=seen, limit=self.top_n * 3):
+            if item["productId"] in seen:
+                continue
+            items.append(item)
+            seen.add(item["productId"])
+
+        return items[: max(self.top_n * 3, self.top_n)]
+
+    def _catalog_fallback(
+        self,
+        products: dict[str, dict[str, Any]],
+        exclude: set[str],
+        limit: int,
+    ) -> list[dict[str, Any]]:
+        items: list[dict[str, Any]] = []
+        # Prefer higher stock / more recently stocked-looking items by stock desc.
+        ranked = sorted(
+            products.values(),
+            key=lambda p: float(p.get("stock") or 0),
+            reverse=True,
+        )
+        for product in ranked:
+            product_id = product["id"]
+            if product_id in exclude:
+                continue
+            items.append(
                 {
                     "productId": product_id,
-                    "score": round(math.log(quantity + 1), 6),
-                    "reason": "popular_product",
-                }
-                for product_id, quantity in counts.most_common()
-            ]
-        else:
-            items = [
-                {
-                    "productId": product_id,
-                    "score": 1.0,
+                    "score": 0.5,
                     "reason": "available_product",
                 }
-                for product_id in products
-            ]
-        return items[: self.top_n]
+            )
+            if len(items) >= limit:
+                break
+        return items
 
     def _cold_start_recommendations(
         self,
@@ -252,7 +353,7 @@ class RecommendationEngine:
         preference = self._category_preference(user_id)
         popular = self._popular_products(purchases, products)
         if not preference:
-            return popular
+            return popular[: self.top_n]
 
         preferred = [
             item
@@ -260,7 +361,17 @@ class RecommendationEngine:
             if products.get(item["productId"], {}).get("category") == preference
         ]
         remaining = [item for item in popular if item not in preferred]
-        return (preferred + remaining)[: self.top_n]
+        filled = (preferred + remaining)[: self.top_n]
+        if len(filled) < self.top_n:
+            seen = {item["productId"] for item in filled}
+            filled.extend(
+                self._catalog_fallback(
+                    products,
+                    exclude=seen,
+                    limit=self.top_n - len(filled),
+                )
+            )
+        return filled[: self.top_n]
 
     def _category_preference(self, user_id: str) -> str | None:
         doc = self.db.collection("users").document(user_id).get()
@@ -274,6 +385,7 @@ class RecommendationEngine:
         batch: firestore.WriteBatch,
         user_id: str,
         recommendations: list[dict[str, Any]],
+        source: str = "collaborative_filtering",
     ) -> None:
         ref = self.db.collection("recommendations").document(user_id)
         batch.set(
@@ -281,7 +393,7 @@ class RecommendationEngine:
             {
                 "userId": user_id,
                 "items": recommendations,
-                "source": "collaborative_filtering",
+                "source": source,
                 "updatedAt": firestore.SERVER_TIMESTAMP,
             },
         )
@@ -356,6 +468,3 @@ class RecommendationEngine:
                 "metrics": metrics or {},
             }
         )
-
-    def _commit(self, batch: firestore.WriteBatch) -> None:
-        batch.commit()

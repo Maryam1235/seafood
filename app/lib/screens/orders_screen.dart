@@ -1152,6 +1152,17 @@ class _OrderDetailSheet extends StatelessWidget {
                               'fulfillment': 'pickup',
                               'grandTotal': total,
                             });
+                        // Pickup skips ClickPesa — still write purchase_history.
+                        try {
+                          await ApiService.post(
+                            '/recommendations/record-purchase',
+                            {'orderId': orderId},
+                          );
+                        } catch (e) {
+                          debugPrint(
+                            'record-purchase failed for pickup order $orderId: $e',
+                          );
+                        }
                         if (context.mounted) Navigator.pop(context);
                       },
                     ),

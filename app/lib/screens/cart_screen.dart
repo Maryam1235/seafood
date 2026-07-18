@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
+import '../services/api_service.dart';
 import '../services/cart_service.dart';
 import 'delivery_selection_screen.dart';
 import 'customer_dashboard.dart';
@@ -412,6 +413,17 @@ class _FulfillmentSheetState extends State<_FulfillmentSheet> {
             'grandTotal': widget.orderTotal,
             'status': 'confirmed',
           });
+
+      // Pickup skips ClickPesa, so feed purchase_history via NestJS.
+      try {
+        await ApiService.post('/recommendations/record-purchase', {
+          'orderId': widget.orderId,
+        });
+      } catch (e) {
+        // Non-fatal: order is confirmed; recommendations can catch up later.
+        debugPrint('record-purchase failed for pickup: $e');
+      }
+
       if (mounted) {
         // Close sheet, then show pickup success screen
         final navigator = Navigator.of(context);
