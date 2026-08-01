@@ -135,7 +135,7 @@ export default function AddProduct({ onBack }) {
 
             <div className={styles.field}>
               <label>Price (TShs) *</label>
-              <input required type="number" min="0" placeholder="e.g. 5000" value={form.price}
+              <input required inputMode="numeric" pattern="[0-9]*(\.[0-9]+)?" placeholder="e.g. 5000" value={form.price}
                 onChange={e => setForm({...form, price: e.target.value})} />
             </div>
 
@@ -148,7 +148,7 @@ export default function AddProduct({ onBack }) {
 
             <div className={styles.field}>
               <label>Available Stock *</label>
-              <input required type="number" min="0" placeholder="e.g. 50" value={form.stock}
+              <input required inputMode="numeric" pattern="[0-9]*(\.[0-9]+)?" placeholder="e.g. 50" value={form.stock}
                 onChange={e => setForm({...form, stock: e.target.value})} />
             </div>
 

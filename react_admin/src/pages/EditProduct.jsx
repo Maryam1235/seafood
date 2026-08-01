@@ -133,8 +133,9 @@ export default function EditProduct({ product, onBack }) {
 
             <div className={styles.field}>
               <label>Price (TShs) *</label>
-              <input required type="number" min="0" value={form.price}
-                onChange={e => setForm({...form, price: e.target.value})} />
+              <input required inputMode="numeric" pattern="[0-9]*(\.[0-9]+)?" value={form.price}
+                onChange={e => setForm({...form, price: e.target.value})}
+                placeholder="e.g. 5000" />
             </div>
 
             <div className={styles.field}>
@@ -146,8 +147,9 @@ export default function EditProduct({ product, onBack }) {
 
             <div className={styles.field}>
               <label>Available Stock *</label>
-              <input required type="number" min="0" value={form.stock}
-                onChange={e => setForm({...form, stock: e.target.value})} />
+              <input required inputMode="numeric" pattern="[0-9]*(\.[0-9]+)?" value={form.stock}
+                onChange={e => setForm({...form, stock: e.target.value})}
+                placeholder="e.g. 50" />
             </div>
 
             <div className={styles.field}>
