@@ -13,10 +13,13 @@ void main() async {
   final languageProvider = LanguageProvider();
   await languageProvider.init();
 
-  // Initialize notifications
-  await NotificationService.init();
-
   runApp(MyApp(languageProvider: languageProvider));
+
+  // Init notifications AFTER the app is rendered so it never causes a black
+  // screen. Failures here are non-fatal — the app works without push alerts.
+  NotificationService.init().catchError(
+    (e) => debugPrint('[NotificationService] init failed: $e'),
+  );
 }
 
 class MyApp extends StatelessWidget {

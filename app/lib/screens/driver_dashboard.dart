@@ -34,11 +34,37 @@ class _DriverDashboardState extends State<DriverDashboard> {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       final data = await _authService.getUserData(user.uid);
-      if (mounted) setState(() => _userData = data);
+      if (mounted) {
+        setState(() {
+          _userData = data;
+          // Restore saved online status from Firestore
+          _isOnline = data?['isOnline'] == true;
+        });
+      }
+    }
+  }
+
+  // Toggle online/offline and persist to Firestore
+  Future<void> _toggleOnline(bool value) async {
+    setState(() => _isOnline = value);
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .update({'isOnline': value});
     }
   }
 
   Future<void> _logout() async {
+    // Set offline before logging out
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .update({'isOnline': false});
+    }
     await _authService.logout();
     if (mounted) {
       Navigator.pushAndRemoveUntil(
@@ -61,7 +87,7 @@ class _DriverDashboardState extends State<DriverDashboard> {
         userData: _userData,
         lang: lang,
         isOnline: _isOnline,
-        onToggle: (v) => setState(() => _isOnline = v),
+        onToggle: _toggleOnline,
         onLogout: _logout,
         onOpenDrawer: _openDrawer,
         onNavigate: (i) => setState(() => _currentIndex = i),
@@ -266,8 +292,8 @@ class _DriverDashboardState extends State<DriverDashboard> {
                                 Text(
                                   _isOnline
                                       ? (lang.isSwahili
-                                            ? 'Mtandaoni'
-                                            : 'Online')
+                                          ? 'Mtandaoni'
+                                          : 'Online')
                                       : (lang.isSwahili ? 'Nje' : 'Offline'),
                                   style: const TextStyle(
                                     color: Colors.white60,
@@ -581,11 +607,11 @@ class _DriverHomePage extends StatelessWidget {
                             Text(
                               isOnline
                                   ? (lang.isSwahili
-                                        ? 'Uko Mtandaoni'
-                                        : 'You are Online')
+                                      ? 'Uko Mtandaoni'
+                                      : 'You are Online')
                                   : (lang.isSwahili
-                                        ? 'Uko Nje'
-                                        : 'You are Offline'),
+                                      ? 'Uko Nje'
+                                      : 'You are Offline'),
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 15,

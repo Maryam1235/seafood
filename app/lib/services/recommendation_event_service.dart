@@ -29,13 +29,15 @@ class RecommendationEventService {
   static Future<void> logAddToCart(Map<String, dynamic> product) =>
       _log('add_to_cart', product);
 
+  static Future<void> logPurchase(Map<String, dynamic> product) =>
+      _log('purchase', product);
+
   static Future<void> _log(String type, Map<String, dynamic> product) async {
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid;
       if (uid == null) return;
 
-      final productId =
-          (product['id'] ?? product['productId'])?.toString();
+      final productId = (product['id'] ?? product['productId'])?.toString();
       if (productId == null || productId.isEmpty) return;
 
       final key = '$uid|$productId|$type';

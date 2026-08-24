@@ -10,6 +10,9 @@ import 'profile_screen.dart';
 import 'seller_orders_screen.dart';
 import 'add_product_screen.dart';
 import 'settings_screen.dart';
+import 'seller_sales_report_screen.dart';
+import 'seller_notifications_screen.dart';
+import 'seller_complaints_screen.dart';
 
 class SellerDashboard extends StatefulWidget {
   const SellerDashboard({super.key});
@@ -72,6 +75,11 @@ class _SellerDashboardState extends State<SellerDashboard> {
         themeColor: const Color(0xFF1E1B4B),
         onOpenDrawer: _openDrawer,
       ),
+      SellerSalesReportScreen(onOpenDrawer: _openDrawer),
+      // index 6 — notifications
+      SellerNotificationsScreen(onOpenDrawer: _openDrawer),
+      // index 7 — complaints
+      SellerComplaintsScreen(onOpenDrawer: _openDrawer),
     ];
 
     return Scaffold(
@@ -81,10 +89,10 @@ class _SellerDashboardState extends State<SellerDashboard> {
         currentIndex: _currentIndex == 2
             ? 1
             : _currentIndex == 3
-            ? 2
-            : _currentIndex == 4
-            ? 2 // Settings → keep Profile tab highlighted
-            : 0, // Home (index 0) and Products (index 1) → Home tab
+                ? 2
+                : _currentIndex == 4
+                    ? 2 // Settings → keep Profile tab highlighted
+                    : 0, // Home (index 0) and Products (index 1) → Home tab
         onTap: (i) => setState(() {
           if (i == 0) _currentIndex = 0;
           if (i == 1) _currentIndex = 2; // Orders is page index 2
@@ -211,6 +219,24 @@ class _SellerDashboardState extends State<SellerDashboard> {
                       lang.t('settings'),
                       4,
                     ),
+                    _drawerTile(
+                      context,
+                      Icons.bar_chart_outlined,
+                      lang.isSwahili ? 'Ripoti ya Mauzo' : 'Sales Report',
+                      5,
+                    ),
+                    _drawerTile(
+                      context,
+                      Icons.notifications_outlined,
+                      lang.isSwahili ? 'Arifa' : 'Notifications',
+                      6,
+                    ),
+                    _drawerTile(
+                      context,
+                      Icons.report_problem_outlined,
+                      lang.isSwahili ? 'Malalamiko' : 'Complaints',
+                      7,
+                    ),
                   ],
                 ),
               ),
@@ -329,6 +355,50 @@ class _SellerHomePage extends StatelessWidget {
                   onOpenDrawer ?? () => Scaffold.of(context).openDrawer(),
             ),
             actions: [
+              // ── Notification bell with unread badge ──────────────
+              StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('notifications')
+                    .where('userId', isEqualTo: uid)
+                    .where('read', isEqualTo: false)
+                    .snapshots(),
+                builder: (context, snap) {
+                  final count = snap.data?.docs.length ?? 0;
+                  return IconButton(
+                    tooltip: lang.isSwahili ? 'Arifa' : 'Notifications',
+                    onPressed: () => onNavigate?.call(6),
+                    icon: Stack(
+                      children: [
+                        const Icon(Icons.notifications_outlined,
+                            color: Colors.white),
+                        if (count > 0)
+                          Positioned(
+                            right: 0,
+                            top: 0,
+                            child: Container(
+                              width: 16,
+                              height: 16,
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Text(
+                                  count > 9 ? '9+' : '$count',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                },
+              ),
               IconButton(
                 icon: const Icon(Icons.logout, color: Colors.white),
                 tooltip: lang.t('logout'),
@@ -706,11 +776,7 @@ class _RecentOrdersList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('orders')
-          .orderBy('createdAt', descending: true)
-          .limit(20)
-          .snapshots(),
+      stream: FirebaseFirestore.instance.collection('orders').snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Padding(
@@ -720,16 +786,22 @@ class _RecentOrdersList extends StatelessWidget {
         }
         if (!snapshot.hasData) return const SizedBox();
 
-        final orders = snapshot.data!.docs
-            .where((doc) {
-              final data = doc.data() as Map<String, dynamic>;
-              final items = (data['items'] as List?) ?? [];
-              return items.any((i) => i['sellerId'] == uid);
-            })
-            .take(5)
-            .toList();
+        final orders = snapshot.data!.docs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final items = (data['items'] as List?) ?? [];
+          return items.any((i) => i['sellerId'] == uid);
+        }).toList()
+          ..sort((a, b) {
+            final aTs = (a.data() as Map)['createdAt'] as Timestamp?;
+            final bTs = (b.data() as Map)['createdAt'] as Timestamp?;
+            if (aTs == null && bTs == null) return 0;
+            if (aTs == null) return -1;
+            if (bTs == null) return 1;
+            return bTs.compareTo(aTs);
+          });
+        final recentOrders = orders.take(5).toList();
 
-        if (orders.isEmpty) {
+        if (recentOrders.isEmpty) {
           return Padding(
             padding: const EdgeInsets.all(24),
             child: Center(
@@ -755,9 +827,9 @@ class _RecentOrdersList extends StatelessWidget {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          itemCount: orders.length,
+          itemCount: recentOrders.length,
           itemBuilder: (context, index) {
-            final doc = orders[index];
+            final doc = recentOrders[index];
             final order = doc.data() as Map<String, dynamic>;
             final items = (order['items'] as List?) ?? [];
             final mine = items.where((i) => i['sellerId'] == uid).toList();

@@ -11,6 +11,7 @@ import 'orders_screen.dart';
 import 'order_history_screen.dart';
 import 'delivery_personnel_screen.dart';
 import 'settings_screen.dart';
+import 'customer_complaints_screen.dart';
 
 class CustomerDashboard extends StatefulWidget {
   final int initialIndex;
@@ -27,6 +28,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
   // 3 = Delivery Personnel
   // 4 = My Profile
   // 5 = Settings
+  // 6 = My Complaints
   int _currentIndex = 0;
 
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
@@ -51,6 +53,7 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
         themeColor: const Color(0xFF3730A3),
         onOpenDrawer: _openDrawer,
       ), // 5
+      CustomerComplaintsScreen(onOpenDrawer: _openDrawer), // 6
     ];
   }
 
@@ -132,9 +135,9 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                 stream: user == null
                     ? const Stream.empty()
                     : FirebaseFirestore.instance
-                          .collection('users')
-                          .doc(user.uid)
-                          .snapshots(),
+                        .collection('users')
+                        .doc(user.uid)
+                        .snapshots(),
                 builder: (context, snap) {
                   final data = snap.data?.data() as Map<String, dynamic>? ?? {};
                   final name = data['fullName'] ?? data['username'] ?? '';
@@ -248,6 +251,12 @@ class _CustomerDashboardState extends State<CustomerDashboard> {
                       Icons.settings_outlined,
                       lang.t('settings'),
                       5,
+                    ),
+                    _drawerTile(
+                      context,
+                      Icons.report_problem_outlined,
+                      lang.isSwahili ? 'Malalamiko' : 'Complaints',
+                      6,
                     ),
                   ],
                 ),

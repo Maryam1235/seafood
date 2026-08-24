@@ -76,8 +76,7 @@ class _BrowseSeafoodScreenState extends State<BrowseSeafoodScreen> {
             automaticallyImplyLeading: false,
             leading: IconButton(
               icon: const Icon(Icons.menu, color: Colors.white),
-              onPressed:
-                  widget.onOpenDrawer ??
+              onPressed: widget.onOpenDrawer ??
                   () => Scaffold.of(context).openDrawer(),
             ),
             actions: [
@@ -566,7 +565,10 @@ class _RecommendedProductCard extends StatelessWidget {
     final name = product['name'] ?? '';
     final price = product['price'];
     final unit = product['unit'] ?? 'kg';
+    final stockRaw = product['stock'];
+    final stockNum = stockRaw != null ? (stockRaw as num) : null;
     final category = product['category'] ?? '';
+    final isLowStock = stockNum != null && stockNum > 0 && stockNum <= 5;
 
     return GestureDetector(
       onTap: () {
@@ -599,17 +601,48 @@ class _RecommendedProductCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-              child: imageUrl != null
-                  ? Image.network(
-                      imageUrl,
-                      height: 105,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _placeholder(),
-                    )
-                  : _placeholder(),
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(14)),
+                  child: imageUrl != null
+                      ? Image.network(
+                          imageUrl,
+                          height: 105,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _placeholder(),
+                        )
+                      : _placeholder(),
+                ),
+                // Low-stock badge for recommended cards
+                if (isLowStock)
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade600,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        lang.isSwahili
+                            ? 'Inakwisha!'
+                            : '${stockNum.toStringAsFixed(0)} left!',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             Padding(
               padding: const EdgeInsets.all(10),
@@ -653,11 +686,11 @@ class _RecommendedProductCard extends StatelessWidget {
   }
 
   Widget _placeholder() => Container(
-    height: 105,
-    width: double.infinity,
-    color: Colors.grey.shade100,
-    child: Icon(Icons.set_meal, size: 34, color: Colors.grey.shade300),
-  );
+        height: 105,
+        width: double.infinity,
+        color: Colors.grey.shade100,
+        child: Icon(Icons.set_meal, size: 34, color: Colors.grey.shade300),
+      );
 }
 
 class _ProductCard extends StatelessWidget {
@@ -672,7 +705,9 @@ class _ProductCard extends StatelessWidget {
     final name = product['name'] ?? '';
     final price = product['price'];
     final unit = product['unit'] ?? 'kg';
-    final stock = product['stock'];
+    final stockRaw = product['stock'];
+    final stockNum = stockRaw != null ? (stockRaw as num) : null;
+    final isLowStock = stockNum != null && stockNum > 0 && stockNum <= 5;
     final location = product['location'] ?? '';
     final imageUrl = product['imageUrl'];
     final category = product['category'] ?? '';
@@ -747,6 +782,32 @@ class _ProductCard extends StatelessWidget {
                     ),
                   ),
                 ),
+                // Low-stock badge
+                if (isLowStock)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade600,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        lang.isSwahili
+                            ? 'Inakwisha!'
+                            : 'Only ${stockNum.toStringAsFixed(0)} left!',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
             Padding(
@@ -783,7 +844,7 @@ class _ProductCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 3),
                       Text(
-                        '$stock $unit',
+                        '$stockRaw $unit',
                         style: TextStyle(
                           fontSize: 11,
                           color: Colors.grey.shade500,
@@ -823,11 +884,11 @@ class _ProductCard extends StatelessWidget {
   }
 
   Widget _placeholder() => Container(
-    height: 120,
-    width: double.infinity,
-    color: Colors.grey.shade100,
-    child: Icon(Icons.set_meal, size: 40, color: Colors.grey.shade300),
-  );
+        height: 120,
+        width: double.infinity,
+        color: Colors.grey.shade100,
+        child: Icon(Icons.set_meal, size: 40, color: Colors.grey.shade300),
+      );
 }
 
 class _ProductDetailSheet extends StatelessWidget {
@@ -1081,9 +1142,8 @@ class _ProductDetailSheet extends StatelessWidget {
                                 ),
                                 backgroundColor: _navy,
                                 action: SnackBarAction(
-                                  label: lang.isSwahili
-                                      ? 'Tazama'
-                                      : 'View Cart',
+                                  label:
+                                      lang.isSwahili ? 'Tazama' : 'View Cart',
                                   textColor: Colors.white,
                                   onPressed: () => nav.push(
                                     MaterialPageRoute(
@@ -1140,53 +1200,53 @@ class _ProductDetailSheet extends StatelessWidget {
   }
 
   Widget _sectionTitle(String title) => Text(
-    title,
-    style: const TextStyle(
-      fontSize: 16,
-      fontWeight: FontWeight.bold,
-      color: Color(0xFF111827),
-    ),
-  );
+        title,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: Color(0xFF111827),
+        ),
+      );
 
   Widget _chip(IconData icon, String label, Color color) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-    decoration: BoxDecoration(
-      color: color.withOpacity(0.1),
-      borderRadius: BorderRadius.circular(8),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, size: 13, color: color),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: color,
-            fontWeight: FontWeight.w600,
-          ),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
         ),
-      ],
-    ),
-  );
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: color),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
 
   Widget _sellerRow(IconData icon, String text, Color color) => Row(
-    children: [
-      Icon(icon, size: 13, color: color),
-      const SizedBox(width: 5),
-      Expanded(
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: 13,
-            color: color,
-            fontWeight: FontWeight.w500,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 5),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 13,
+                color: color,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
-    ],
-  );
+        ],
+      );
 }

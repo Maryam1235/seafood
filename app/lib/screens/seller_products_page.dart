@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/language_provider.dart';
 import 'add_product_screen.dart';
+import 'edit_product_screen.dart';
 
 int _getTime(Map p) {
   final t = p['createdAt'];
@@ -231,8 +232,8 @@ class _SellerProductsPageState extends State<SellerProductsPage> {
                       .where(
                         (p) =>
                             (p['name'] ?? '').toString().toLowerCase().contains(
-                              _search,
-                            ) ||
+                                  _search,
+                                ) ||
                             (p['category'] ?? '')
                                 .toString()
                                 .toLowerCase()
@@ -242,13 +243,11 @@ class _SellerProductsPageState extends State<SellerProductsPage> {
                 }
 
                 if (_filterStatus == 'active') {
-                  products = products
-                      .where((p) => p['isAvailable'] == true)
-                      .toList();
+                  products =
+                      products.where((p) => p['isAvailable'] == true).toList();
                 } else if (_filterStatus == 'inactive') {
-                  products = products
-                      .where((p) => p['isAvailable'] != true)
-                      .toList();
+                  products =
+                      products.where((p) => p['isAvailable'] != true).toList();
                 }
 
                 products.sort((a, b) {
@@ -265,8 +264,8 @@ class _SellerProductsPageState extends State<SellerProductsPage> {
                       );
                     case 'name':
                       return (a['name'] ?? '').toString().compareTo(
-                        (b['name'] ?? '').toString(),
-                      );
+                            (b['name'] ?? '').toString(),
+                          );
                     default:
                       return _getTime(b).compareTo(_getTime(a));
                   }
@@ -362,9 +361,8 @@ class _SellerProductsPageState extends State<SellerProductsPage> {
                                     ? widget.lang.t('active')
                                     : widget.lang.t('inactive'),
                                 style: TextStyle(
-                                  color: isAvailable
-                                      ? Colors.green
-                                      : Colors.red,
+                                  color:
+                                      isAvailable ? Colors.green : Colors.red,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -399,6 +397,40 @@ class _SellerProductsPageState extends State<SellerProductsPage> {
                                     ),
                                     style: TextButton.styleFrom(
                                       foregroundColor: Colors.blue,
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  width: 1,
+                                  height: 30,
+                                  color: Colors.grey.shade100,
+                                ),
+                                // ── Edit button ──────────────────────────
+                                Expanded(
+                                  child: TextButton.icon(
+                                    onPressed: () async {
+                                      final updated =
+                                          await Navigator.push<bool>(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              EditProductScreen(product: p),
+                                        ),
+                                      );
+                                      // List auto-refreshes via StreamBuilder
+                                      // but if image changed we force a rebuild
+                                      if (updated == true && mounted) {
+                                        setState(() {});
+                                      }
+                                    },
+                                    icon: const Icon(Icons.edit_outlined,
+                                        size: 16),
+                                    label: Text(
+                                      widget.lang.isSwahili ? 'Hariri' : 'Edit',
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: const Color(0xFF1E1B4B),
                                     ),
                                   ),
                                 ),

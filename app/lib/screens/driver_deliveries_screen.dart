@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../providers/language_provider.dart';
 import '../services/notification_service.dart';
+import 'map_screen.dart';
 
 // ── Active Delivery Screen ────────────────────────────────────────────────────
 class ActiveDeliveryScreen extends StatelessWidget {
@@ -34,8 +34,8 @@ class ActiveDeliveryScreen extends StatelessWidget {
         stream: FirebaseFirestore.instance
             .collection('orders')
             .where('delivery.driverId', isEqualTo: uid)
-            .where('delivery.status', whereIn: ['picking_up', 'on_the_way'])
-            .snapshots(),
+            .where('delivery.status',
+                whereIn: ['picking_up', 'on_the_way']).snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -124,11 +124,11 @@ class ActiveDeliveryScreen extends StatelessWidget {
                                     Text(
                                       isPickingUp
                                           ? (lang.isSwahili
-                                                ? 'Hatua 1: Chukua kwa Muuzaji'
-                                                : 'Step 1: Pick Up from Seller')
+                                              ? 'Hatua 1: Chukua kwa Muuzaji'
+                                              : 'Step 1: Pick Up from Seller')
                                           : (lang.isSwahili
-                                                ? 'Hatua 2: Peleka kwa Mteja'
-                                                : 'Step 2: Deliver to Customer'),
+                                              ? 'Hatua 2: Peleka kwa Mteja'
+                                              : 'Step 2: Deliver to Customer'),
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 14,
@@ -181,9 +181,8 @@ class ActiveDeliveryScreen extends StatelessWidget {
                             child: LinearProgressIndicator(
                               value: isPickingUp ? 0.5 : 1.0,
                               backgroundColor: Colors.grey.shade200,
-                              color: isPickingUp
-                                  ? Colors.orange.shade400
-                                  : _teal,
+                              color:
+                                  isPickingUp ? Colors.orange.shade400 : _teal,
                               minHeight: 6,
                             ),
                           ),
@@ -203,8 +202,7 @@ class ActiveDeliveryScreen extends StatelessWidget {
                             final seller =
                                 snap.data?.data() as Map<String, dynamic>?;
                             if (seller == null) return const SizedBox();
-                            final sellerName =
-                                seller['fullName'] ??
+                            final sellerName = seller['fullName'] ??
                                 seller['username'] ??
                                 'Seller';
                             final sellerPhone = seller['phone'] ?? 'N/A';
@@ -247,29 +245,34 @@ class ActiveDeliveryScreen extends StatelessWidget {
                                       Builder(
                                         builder: (ctx) {
                                           final loc =
-                                              seller?['location'] as Map?;
-                                          final lat = (loc?['latitude'] as num?)
-                                              ?.toDouble();
-                                          final lng =
-                                              (loc?['longitude'] as num?)
+                                              seller['location'] as Map?;
+                                          final lat = loc == null
+                                              ? null
+                                              : (loc['latitude'] as num?)
                                                   ?.toDouble();
-                                          if (lat == null || lng == null)
+                                          final lng = loc == null
+                                              ? null
+                                              : (loc['longitude'] as num?)
+                                                  ?.toDouble();
+                                          if (lat == null || lng == null) {
                                             return const SizedBox();
+                                          }
                                           return GestureDetector(
                                             onTap: () =>
                                                 ActiveDeliveryScreen._openMaps(
-                                                  ctx,
-                                                  lat,
-                                                  lng,
-                                                  seller?['fullName'] ??
-                                                      'Seller',
-                                                ),
+                                              ctx,
+                                              lat,
+                                              lng,
+                                              seller['fullName'] ?? 'Seller',
+                                              subtitle: sellerLocation,
+                                              pinColor: Colors.orange.shade700,
+                                            ),
                                             child: Container(
                                               padding:
                                                   const EdgeInsets.symmetric(
-                                                    horizontal: 10,
-                                                    vertical: 5,
-                                                  ),
+                                                horizontal: 10,
+                                                vertical: 5,
+                                              ),
                                               decoration: BoxDecoration(
                                                 color: Colors.orange.shade700,
                                                 borderRadius:
@@ -373,21 +376,29 @@ class ActiveDeliveryScreen extends StatelessWidget {
                                       builder: (ctx) {
                                         final loc =
                                             customer?['location'] as Map?;
-                                        final lat = (loc?['latitude'] as num?)
-                                            ?.toDouble();
-                                        final lng = (loc?['longitude'] as num?)
-                                            ?.toDouble();
-                                        if (lat == null || lng == null)
+                                        final lat = loc == null
+                                            ? null
+                                            : (loc['latitude'] as num?)
+                                                ?.toDouble();
+                                        final lng = loc == null
+                                            ? null
+                                            : (loc['longitude'] as num?)
+                                                ?.toDouble();
+                                        if (lat == null || lng == null) {
                                           return const SizedBox();
+                                        }
                                         return GestureDetector(
                                           onTap: () =>
                                               ActiveDeliveryScreen._openMaps(
-                                                ctx,
-                                                lat,
-                                                lng,
-                                                customer?['fullName'] ??
-                                                    'Customer',
-                                              ),
+                                            ctx,
+                                            lat,
+                                            lng,
+                                            customer?['fullName'] ?? 'Customer',
+                                            subtitle: customer?['location']
+                                                    ?['name'] ??
+                                                '',
+                                            pinColor: Colors.teal.shade700,
+                                          ),
                                           child: Container(
                                             padding: const EdgeInsets.symmetric(
                                               horizontal: 10,
@@ -583,10 +594,10 @@ class ActiveDeliveryScreen extends StatelessWidget {
                                   .collection('orders')
                                   .doc(doc.id)
                                   .update({
-                                    'delivery.status': 'on_the_way',
-                                    'delivery.pickedUpAt':
-                                        FieldValue.serverTimestamp(),
-                                  });
+                                'delivery.status': 'on_the_way',
+                                'delivery.pickedUpAt':
+                                    FieldValue.serverTimestamp(),
+                              });
                               if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
@@ -605,12 +616,13 @@ class ActiveDeliveryScreen extends StatelessWidget {
                                   .collection('orders')
                                   .doc(doc.id)
                                   .update({
-                                    'status': 'delivered',
-                                    'delivery.status': 'delivered',
-                                    'delivery.deliveredAt':
-                                        FieldValue.serverTimestamp(),
-                                  });
-                              await NotificationService.sendOrderStatusNotification(
+                                'status': 'delivered',
+                                'delivery.status': 'delivered',
+                                'delivery.deliveredAt':
+                                    FieldValue.serverTimestamp(),
+                              });
+                              await NotificationService
+                                  .sendOrderStatusNotification(
                                 customerId: order['customerId'],
                                 orderId: doc.id,
                                 status: 'delivered',
@@ -637,20 +649,19 @@ class ActiveDeliveryScreen extends StatelessWidget {
                           label: Text(
                             isPickingUp
                                 ? (lang.isSwahili
-                                      ? 'Nimechukua — Nenda kwa Mteja'
-                                      : 'Picked Up — Head to Customer')
+                                    ? 'Nimechukua — Nenda kwa Mteja'
+                                    : 'Picked Up — Head to Customer')
                                 : (lang.isSwahili
-                                      ? 'Imefika — Kamilisha'
-                                      : 'Delivered — Mark Complete'),
+                                    ? 'Imefika — Kamilisha'
+                                    : 'Delivered — Mark Complete'),
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: isPickingUp
-                                ? Colors.orange.shade700
-                                : _teal,
+                            backgroundColor:
+                                isPickingUp ? Colors.orange.shade700 : _teal,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -691,39 +702,27 @@ class ActiveDeliveryScreen extends StatelessWidget {
     );
   }
 
-  /// Opens Google Maps with directions from driver's current location to [destLat]/[destLng].
-  /// Falls back to browser if the app is not installed.
-  static Future<void> _openMaps(
+  /// Opens the in-app map screen centred on [destLat]/[destLng].
+  static void _openMaps(
     BuildContext context,
     double destLat,
     double destLng,
-    String label,
-  ) async {
-    // Google Maps app — navigation with driving directions from current location
-    final appUri = Uri.parse('google.navigation:q=$destLat,$destLng&mode=d');
-    // Browser fallback
-    final webUri = Uri.parse(
-      'https://www.google.com/maps/dir/?api=1&destination=$destLat,$destLng&travelmode=driving',
+    String label, {
+    String? subtitle,
+    Color? pinColor,
+  }) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MapScreen(
+          latitude: destLat,
+          longitude: destLng,
+          label: label,
+          subtitle: subtitle,
+          pinColor: pinColor,
+        ),
+      ),
     );
-
-    // Try app first, fall back to browser — skip canLaunchUrl (unreliable on Android 11+)
-    try {
-      final launched = await launchUrl(
-        appUri,
-        mode: LaunchMode.externalApplication,
-      );
-      if (launched) return;
-    } catch (_) {}
-
-    try {
-      await launchUrl(webUri, mode: LaunchMode.externalApplication);
-    } catch (_) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Could not open maps')));
-      }
-    }
   }
 }
 
@@ -1248,9 +1247,7 @@ class AvailableOrdersScreen extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 8),
-                      ...items
-                          .take(2)
-                          .map(
+                      ...items.take(2).map(
                             (item) => Padding(
                               padding: const EdgeInsets.only(bottom: 4),
                               child: Row(

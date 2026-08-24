@@ -28,6 +28,18 @@ class MainActivity : FlutterActivity() {
             }
             manager.createNotificationChannel(ordersChannel)
 
+            // Low-stock channel — high importance so it pops up as a heads-up banner
+            val stockChannel = NotificationChannel(
+                "zanseafood_stock",
+                "Stock Alerts",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Alerts when a product stock is running low or out"
+                enableVibration(true)
+                enableLights(true)
+            }
+            manager.createNotificationChannel(stockChannel)
+
             // General channel
             val generalChannel = NotificationChannel(
                 "zanseafood_general",

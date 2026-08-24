@@ -106,10 +106,10 @@ class DeliveryPersonnelScreen extends StatelessWidget {
                 final bChat = chatByDriver[b.id];
                 final aTs =
                     (aChat?['lastAt'] as Timestamp?)?.millisecondsSinceEpoch ??
-                    0;
+                        0;
                 final bTs =
                     (bChat?['lastAt'] as Timestamp?)?.millisecondsSinceEpoch ??
-                    0;
+                        0;
                 return bTs.compareTo(aTs); // newest first
               });
 
@@ -222,15 +222,14 @@ class _DriverCard extends StatelessWidget {
     final unreadStream = chatId == null
         ? Stream<int>.value(0)
         : FirebaseFirestore.instance
-              .collection('chats')
-              .doc(chatId)
-              .collection('messages')
-              .where('senderId', isEqualTo: driverId)
-              .snapshots()
-              .map(
-                (snap) =>
-                    snap.docs.where((d) => d.data()['read'] != true).length,
-              );
+            .collection('chats')
+            .doc(chatId)
+            .collection('messages')
+            .where('senderId', isEqualTo: driverId)
+            .snapshots()
+            .map(
+              (snap) => snap.docs.where((d) => d.data()['read'] != true).length,
+            );
 
     return StreamBuilder<int>(
       stream: unreadStream,
@@ -304,9 +303,8 @@ class _DriverCard extends StatelessWidget {
                             name,
                             style: TextStyle(
                               fontSize: 15,
-                              fontWeight: hasUnread
-                                  ? FontWeight.bold
-                                  : FontWeight.w600,
+                              fontWeight:
+                                  hasUnread ? FontWeight.bold : FontWeight.w600,
                               color: const Color(0xFF111827),
                             ),
                           ),
@@ -550,11 +548,7 @@ class _DeliveryStats extends StatelessWidget {
             ),
             const SizedBox(width: 4),
             Text(
-              '$count ${lang.isSwahili
-                  ? 'utoaji'
-                  : count == 1
-                  ? 'delivery'
-                  : 'deliveries'}',
+              '$count ${lang.isSwahili ? 'utoaji' : count == 1 ? 'delivery' : 'deliveries'}',
               style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
             ),
           ],

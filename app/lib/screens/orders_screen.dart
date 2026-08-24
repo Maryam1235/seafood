@@ -1,11 +1,13 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../providers/language_provider.dart';
 import '../services/api_service.dart';
+import '../services/cart_service.dart';
+import 'map_screen.dart';
 import 'delivery_selection_screen.dart';
+import 'complaint_screen.dart';
 
 class OrdersScreen extends StatefulWidget {
   final VoidCallback? onOpenDrawer;
@@ -111,7 +113,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          // ── Search bar + filter chips ──────────────────────────
+          // â”€â”€ Search bar + filter chips â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           final searchBar = Container(
             color: Colors.white,
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
@@ -122,9 +124,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   controller: _searchController,
                   onChanged: (v) => setState(() => _search = v.toLowerCase()),
                   decoration: InputDecoration(
-                    hintText: lang.isSwahili
-                        ? 'Tafuta agizo...'
-                        : 'Search orders...',
+                    hintText:
+                        lang.isSwahili ? 'Tafuta agizo...' : 'Search orders...',
                     hintStyle: TextStyle(
                       color: Colors.grey.shade400,
                       fontSize: 14,
@@ -235,7 +236,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
             );
           }
 
-          // ── Apply sort + filter ────────────────────────────────
+          // â”€â”€ Apply sort + filter â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           var orders = snapshot.data!.docs.toList();
 
           // Sort client-side by createdAt (newest first by default)
@@ -265,8 +266,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
               final items = (d['items'] as List?) ?? [];
               final itemMatch = items.any(
                 (i) => (i['name'] ?? '').toString().toLowerCase().contains(
-                  _search,
-                ),
+                      _search,
+                    ),
               );
               return idMatch || itemMatch;
             }).toList();
@@ -412,11 +413,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                             Text(
                                               fulfillment == 'pickup'
                                                   ? (lang.isSwahili
-                                                        ? 'Kuchukua'
-                                                        : 'Pickup')
+                                                      ? 'Kuchukua'
+                                                      : 'Pickup')
                                                   : (lang.isSwahili
-                                                        ? 'Utoaji'
-                                                        : 'Delivery'),
+                                                      ? 'Utoaji'
+                                                      : 'Delivery'),
                                               style: TextStyle(
                                                 fontSize: 10,
                                                 fontWeight: FontWeight.bold,
@@ -457,9 +458,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                               ),
                             ),
                             // Items preview
-                            ...items
-                                .take(2)
-                                .map(
+                            ...items.take(2).map(
                                   (item) => Padding(
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 16,
@@ -595,14 +594,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
   }
 
   Widget _imgPlaceholder() => Container(
-    width: 48,
-    height: 48,
-    color: Colors.grey.shade100,
-    child: Icon(Icons.set_meal, color: Colors.grey.shade300, size: 24),
-  );
+        width: 48,
+        height: 48,
+        color: Colors.grey.shade100,
+        child: Icon(Icons.set_meal, color: Colors.grey.shade300, size: 24),
+      );
 }
 
-// ── Sort chip ──────────────────────────────────────────────────────────────
+// â”€â”€ Sort chip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class _SortChip extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -652,7 +651,7 @@ class _SortChip extends StatelessWidget {
   }
 }
 
-// ── Status filter chip ─────────────────────────────────────────────────────
+// â”€â”€ Status filter chip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class _FilterChip extends StatelessWidget {
   final String label;
   final Color color;
@@ -690,7 +689,7 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
-// ── Order detail + payment sheet ──────────────────────────────────────────────
+// â”€â”€ Order detail + payment sheet â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class _OrderDetailSheet extends StatelessWidget {
   final String orderId;
   final Map<String, dynamic> order;
@@ -850,7 +849,7 @@ class _OrderDetailSheet extends StatelessWidget {
                 controller: controller,
                 padding: const EdgeInsets.all(16),
                 children: [
-                  // ── Items ──────────────────────────────────────────
+                  // â”€â”€ Items â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                   _sectionTitle(lang.isSwahili ? 'Bidhaa' : 'Items'),
                   Container(
                     decoration: BoxDecoration(
@@ -940,7 +939,7 @@ class _OrderDetailSheet extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
 
-                  // ── Order summary ──────────────────────────────────
+                  // â”€â”€ Order summary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                   _sectionTitle(lang.isSwahili ? 'Muhtasari' : 'Summary'),
                   Container(
                     padding: const EdgeInsets.all(16),
@@ -996,11 +995,11 @@ class _OrderDetailSheet extends StatelessWidget {
                               child: Text(
                                 fulfillment == 'pickup'
                                     ? (lang.isSwahili
-                                          ? 'Kuja Kuchukua — Bila ada ya utoaji'
-                                          : 'Pick Up — No delivery fee')
+                                        ? 'Kuja Kuchukua â€” Bila ada ya utoaji'
+                                        : 'Pick Up â€” No delivery fee')
                                     : (lang.isSwahili
-                                          ? 'Utoaji — Dereva: ${delivery?['driverName'] ?? 'N/A'}'
-                                          : 'Delivery — Driver: ${delivery?['driverName'] ?? 'N/A'}'),
+                                        ? 'Utoaji â€” Dereva: ${delivery?['driverName'] ?? 'N/A'}'
+                                        : 'Delivery â€” Driver: ${delivery?['driverName'] ?? 'N/A'}'),
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: fulfillment == 'pickup'
@@ -1010,7 +1009,7 @@ class _OrderDetailSheet extends StatelessWidget {
                                 ),
                               ),
                             ),
-                            // Map button — shows driver's current location
+                            // Map button â€” shows driver's current location
                             if (fulfillment != 'pickup' &&
                                 delivery?['driverId'] != null)
                               FutureBuilder<DocumentSnapshot>(
@@ -1019,47 +1018,33 @@ class _OrderDetailSheet extends StatelessWidget {
                                     .doc(delivery!['driverId'] as String)
                                     .get(),
                                 builder: (context, driverSnap) {
-                                  final driverData =
-                                      driverSnap.data?.data()
-                                          as Map<String, dynamic>?;
-                                  final loc =
-                                      driverData?['location']
-                                          as Map<String, dynamic>?;
-                                  final lat = (loc?['latitude'] as num?)
-                                      ?.toDouble();
-                                  final lng = (loc?['longitude'] as num?)
-                                      ?.toDouble();
+                                  final driverData = driverSnap.data?.data()
+                                      as Map<String, dynamic>?;
+                                  final loc = driverData?['location']
+                                      as Map<String, dynamic>?;
+                                  final lat =
+                                      (loc?['latitude'] as num?)?.toDouble();
+                                  final lng =
+                                      (loc?['longitude'] as num?)?.toDouble();
                                   if (lat == null || lng == null) {
                                     return const SizedBox();
                                   }
                                   return GestureDetector(
-                                    onTap: () async {
-                                      // Try Google Maps app first
-                                      final appUri = Uri.parse(
-                                        'geo:$lat,$lng?q=$lat,$lng(${Uri.encodeComponent(delivery['driverName'] ?? 'Driver')})',
-                                      );
-                                      final webUri = Uri.parse(
-                                        'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
-                                      );
-                                      try {
-                                        final launched = await launchUrl(
-                                          appUri,
-                                          mode: LaunchMode.externalApplication,
-                                        );
-                                        if (!launched) {
-                                          await launchUrl(
-                                            webUri,
-                                            mode:
-                                                LaunchMode.externalApplication,
-                                          );
-                                        }
-                                      } catch (_) {
-                                        await launchUrl(
-                                          webUri,
-                                          mode: LaunchMode.externalApplication,
-                                        );
-                                      }
-                                    },
+                                    onTap: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => MapScreen(
+                                          latitude: lat,
+                                          longitude: lng,
+                                          label: driverData?['fullName'] ??
+                                              driverData?['username'] ??
+                                              (delivery['driverName'] ??
+                                                  'Driver'),
+                                          subtitle: 'Driver • Live Location',
+                                          pinColor: Colors.blue.shade700,
+                                        ),
+                                      ),
+                                    ),
                                     child: Container(
                                       margin: const EdgeInsets.only(left: 8),
                                       padding: const EdgeInsets.symmetric(
@@ -1100,7 +1085,7 @@ class _OrderDetailSheet extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
 
-                  // ── Fulfillment choice (confirmed, not yet chosen) ──
+                  // â”€â”€ Fulfillment choice (confirmed, not yet chosen) â”€â”€
                   if (status == 'confirmed' &&
                       order['fulfillment'] == null &&
                       (delivery == null || delivery['driverId'] == null)) ...[
@@ -1114,8 +1099,8 @@ class _OrderDetailSheet extends StatelessWidget {
                       iconColor: const Color(0xFF3730A3),
                       title: lang.isSwahili ? 'Utoaji' : 'Delivery',
                       subtitle: lang.isSwahili
-                          ? 'Chagua dereva — bei inakokotolewa kwa umbali'
-                          : 'Choose a driver — cost based on distance',
+                          ? 'Chagua dereva â€” bei inakokotolewa kwa umbali'
+                          : 'Choose a driver â€” cost based on distance',
                       badge: lang.isSwahili ? 'Ada ya ziada' : 'Extra fee',
                       badgeColor: Colors.orange,
                       onTap: () {
@@ -1136,9 +1121,8 @@ class _OrderDetailSheet extends StatelessWidget {
                     _FulfillmentOption(
                       icon: Icons.storefront_outlined,
                       iconColor: Colors.green.shade700,
-                      title: lang.isSwahili
-                          ? 'Kuja Kuchukua'
-                          : 'Pick Up Yourself',
+                      title:
+                          lang.isSwahili ? 'Kuja Kuchukua' : 'Pick Up Yourself',
                       subtitle: lang.isSwahili
                           ? 'Nenda mwenyewe kwa muuzaji kuchukua agizo lako'
                           : "Go to the seller's location to collect your order",
@@ -1149,10 +1133,10 @@ class _OrderDetailSheet extends StatelessWidget {
                             .collection('orders')
                             .doc(orderId)
                             .update({
-                              'fulfillment': 'pickup',
-                              'grandTotal': total,
-                            });
-                        // Pickup skips ClickPesa — still write purchase_history.
+                          'fulfillment': 'pickup',
+                          'grandTotal': total,
+                        });
+                        // Pickup skips ClickPesa â€” still write purchase_history.
                         try {
                           await ApiService.post(
                             '/recommendations/record-purchase',
@@ -1169,57 +1153,210 @@ class _OrderDetailSheet extends StatelessWidget {
                     const SizedBox(height: 16),
                   ],
 
-                  // ── Confirm Receipt ───────────────────────────
-                  if ((status == 'confirmed' || status == 'delivered') && order['customerConfirmedReceipt'] != true)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                      child: SizedBox(
-                        width: double.infinity,
-                        height: 54,
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
+                  // â”€â”€ Payment status â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                  _sectionTitle(
+                    lang.isSwahili ? 'Hali ya Malipo' : 'Payment Status',
+                  ),
+                  _PaymentStatusCard(
+                    paymentStatus: order['paymentStatus'] as String?,
+                    fulfillment: fulfillment,
+                    lang: lang,
+                  ),
+                  const SizedBox(height: 16),
+
+                  // â”€â”€ Estimated delivery time â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                  if (order['estimatedDeliveryAt'] != null) ...[
+                    _sectionTitle(
+                      lang.isSwahili
+                          ? 'Wakati wa Kufikia'
+                          : 'Estimated Delivery',
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.teal.shade50,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.teal.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.access_time, color: Colors.teal.shade700),
+                          const SizedBox(width: 12),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                lang.isSwahili
+                                    ? 'Inatarajiwa Kufikia'
+                                    : 'Expected Arrival',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.teal.shade700,
+                                ),
+                              ),
+                              Text(
+                                () {
+                                  final dt = (order['estimatedDeliveryAt']
+                                          as Timestamp)
+                                      .toDate();
+                                  return '${dt.day}/${dt.month}/${dt.year} '
+                                      '${dt.hour.toString().padLeft(2, '0')}:'
+                                      '${dt.minute.toString().padLeft(2, '0')}';
+                                }(),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.teal.shade800,
+                                ),
+                              ),
+                            ],
                           ),
-                          onPressed: () async {
-                            try {
-                              showDialog(
-                                context: context,
-                                barrierDismissible: false,
-                                builder: (_) => const Center(child: CircularProgressIndicator()),
-                              );
-                              await ApiService.post('/payments/release', {
-                                'orderId': orderId,
-                              });
-                              if (context.mounted) {
-                                Navigator.pop(context); // pop loading
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Payment released successfully!')),
-                                );
-                                Navigator.pop(context); // pop bottom sheet
-                              }
-                            } catch (e) {
-                              if (context.mounted) {
-                                Navigator.pop(context); // pop loading
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Error: $e')),
-                                );
-                              }
-                            }
-                          },
-                          child: Text(
-                            lang.isSwahili ? 'Thibitisha Kupokea' : 'Confirm Receipt',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // â”€â”€ Confirm Receipt â€” delivery + escrow â”€â”€â”€â”€â”€â”€â”€â”€
+                  if (status == 'delivered' &&
+                      order['customerConfirmedReceipt'] != true &&
+                      order['paymentStatus'] == 'held_in_escrow') ...[
+                    SizedBox(
+                      width: double.infinity,
+                      height: 54,
+                      child: ElevatedButton.icon(
+                        onPressed: () =>
+                            _confirmReceipt(context, orderId, lang),
+                        icon: const Icon(Icons.check_circle_outline),
+                        label: Text(
+                          lang.isSwahili
+                              ? 'Thibitisha Kupokea & Lipa'
+                              : 'Confirm Receipt & Release Payment',
+                          style: const TextStyle(
+                              fontSize: 14, fontWeight: FontWeight.bold),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green.shade700,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
+                          elevation: 0,
                         ),
                       ),
                     ),
+                    const SizedBox(height: 10),
+                  ],
+
+                  // â”€â”€ Confirm Pickup Collection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                  if (fulfillment == 'pickup' &&
+                      status == 'confirmed' &&
+                      order['customerConfirmedReceipt'] != true) ...[
+                    SizedBox(
+                      width: double.infinity,
+                      height: 54,
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          await FirebaseFirestore.instance
+                              .collection('orders')
+                              .doc(orderId)
+                              .update({
+                            'status': 'delivered',
+                            'customerConfirmedReceipt': true,
+                            'deliveredAt': FieldValue.serverTimestamp(),
+                          });
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(lang.isSwahili
+                                    ? 'Asante! Agizo limekamilika.'
+                                    : 'Great! Order marked as collected.'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.shopping_bag_outlined),
+                        label: Text(
+                          lang.isSwahili
+                              ? "Nimethibitisha Kuchukua"
+                              : "I've Collected My Order",
+                          style: const TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.bold),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green.shade700,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
+                          elevation: 0,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+
+                  // â”€â”€ Cancel Order (pending only) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                  if (status == 'pending') ...[
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: OutlinedButton.icon(
+                        onPressed: () =>
+                            _showCancelDialog(context, orderId, lang),
+                        icon: const Icon(Icons.cancel_outlined,
+                            color: Colors.red),
+                        label: Text(
+                          lang.isSwahili ? 'Ghairi Agizo' : 'Cancel Order',
+                          style: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.red),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+
+                  // â”€â”€ File a Complaint â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                  if (status == 'confirmed' || status == 'delivered') ...[
+                    SizedBox(
+                      width: double.infinity,
+                      height: 46,
+                      child: TextButton.icon(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ComplaintScreen(
+                                prefilledOrderId: orderId,
+                                prefilledSellerId: sellerIds.isNotEmpty
+                                    ? sellerIds.first
+                                    : null,
+                              ),
+                            ),
+                          );
+                        },
+                        icon: Icon(Icons.report_problem_outlined,
+                            color: Colors.orange.shade700, size: 18),
+                        label: Text(
+                          lang.isSwahili
+                              ? 'Wasilisha Malalamiko'
+                              : 'Report an Issue',
+                          style: TextStyle(
+                              color: Colors.orange.shade700,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 24),
                 ],
               ),
@@ -1231,17 +1368,17 @@ class _OrderDetailSheet extends StatelessWidget {
   }
 
   Widget _sectionTitle(String title) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: Text(
-      title,
-      style: TextStyle(
-        fontSize: 13,
-        fontWeight: FontWeight.bold,
-        color: Colors.grey.shade600,
-        letterSpacing: 0.5,
-      ),
-    ),
-  );
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Text(
+          title,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey.shade600,
+            letterSpacing: 0.5,
+          ),
+        ),
+      );
 
   Widget _summaryRow(
     String label,
@@ -1273,14 +1410,200 @@ class _OrderDetailSheet extends StatelessWidget {
   }
 
   Widget _imgBox() => Container(
-    width: 52,
-    height: 52,
-    color: Colors.grey.shade100,
-    child: Icon(Icons.set_meal, color: Colors.grey.shade300, size: 24),
-  );
+        width: 52,
+        height: 52,
+        color: Colors.grey.shade100,
+        child: Icon(Icons.set_meal, color: Colors.grey.shade300, size: 24),
+      );
+
+  // â”€â”€ Confirm receipt & release escrow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  Future<void> _confirmReceipt(
+    BuildContext context,
+    String orderId,
+    LanguageProvider lang,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          lang.isSwahili ? 'Thibitisha Kupokea' : 'Confirm Receipt',
+        ),
+        content: Text(
+          lang.isSwahili
+              ? 'Je, umepokea bidhaa zako? Malipo yatatolewa kwa muuzaji na dereva.'
+              : 'Have you received your items? Payment will be released to the seller and driver.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(lang.isSwahili ? 'Hapana' : 'No'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green.shade700,
+              foregroundColor: Colors.white,
+            ),
+            child: Text(lang.isSwahili ? 'Ndiyo, Thibitisha' : 'Yes, Confirm'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => const Center(child: CircularProgressIndicator()),
+        );
+      }
+      await ApiService.post('/payments/release', {'orderId': orderId});
+      if (context.mounted) {
+        Navigator.pop(context); // loading
+        Navigator.pop(context); // sheet
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(lang.isSwahili
+                ? 'Malipo yametolewa. Asante!'
+                : 'Payment released successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context); // loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // â”€â”€ Cancel order with reason picker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  Future<void> _showCancelDialog(
+    BuildContext context,
+    String orderId,
+    LanguageProvider lang,
+  ) async {
+    String selectedReason = 'Changed my mind';
+    final reasons = [
+      'Changed my mind',
+      'Ordered by mistake',
+      'Found a better price',
+      'Taking too long',
+      'Other',
+    ];
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            lang.isSwahili ? 'Ghairi Agizo' : 'Cancel Order',
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                lang.isSwahili
+                    ? 'Tafadhali chagua sababu ya kughairi:'
+                    : 'Please select a reason for cancellation:',
+                style: const TextStyle(fontSize: 14),
+              ),
+              const SizedBox(height: 12),
+              ...reasons.map(
+                (r) => GestureDetector(
+                  onTap: () => setModalState(() => selectedReason = r),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        Icon(
+                          selectedReason == r
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_unchecked,
+                          size: 20,
+                          color: selectedReason == r
+                              ? const Color(0xFF1E1B4B)
+                              : Colors.grey,
+                        ),
+                        const SizedBox(width: 10),
+                        Text(r, style: const TextStyle(fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(lang.isSwahili ? 'Rudi' : 'Go Back'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: Text(lang.isSwahili ? 'Ghairi' : 'Cancel Order'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed != true || !context.mounted) return;
+
+    try {
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => const Center(child: CircularProgressIndicator()),
+        );
+      }
+      await CartService().cancelOrder(orderId, selectedReason);
+      if (context.mounted) {
+        Navigator.pop(context); // loading
+        Navigator.pop(context); // sheet
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(lang.isSwahili
+                ? 'Agizo limeghairiwa. Hisa imerudishwa.'
+                : 'Order cancelled. Stock has been restored.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context); // loading
+        final msg = e.toString().contains('only_pending')
+            ? (lang.isSwahili
+                ? 'Agizo linaloweza kughairiwa ni lile la kusubiri tu.'
+                : 'Only pending orders can be cancelled.')
+            : 'Error: $e';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
 }
 
-// ── Fulfillment option card ───────────────────────────────────────────────────
+// â”€â”€ Fulfillment option card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class _FulfillmentOption extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
@@ -1388,254 +1711,94 @@ class _FulfillmentOption extends StatelessWidget {
   }
 }
 
-// ── Seller payment card ───────────────────────────────────────────────────────
-class _SellerPaymentCard extends StatelessWidget {
-  final String sellerId;
+// â”€â”€ Payment status card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+class _PaymentStatusCard extends StatelessWidget {
+  final String? paymentStatus;
+  final String fulfillment;
   final LanguageProvider lang;
-  final double amountForSeller;
 
-  const _SellerPaymentCard({
-    required this.sellerId,
+  const _PaymentStatusCard({
+    required this.paymentStatus,
+    required this.fulfillment,
     required this.lang,
-    required this.amountForSeller,
   });
-
-  static const _navy = Color(0xFF3730A3);
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<DocumentSnapshot>(
-      future: FirebaseFirestore.instance
-          .collection('users')
-          .doc(sellerId)
-          .get(),
-      builder: (context, snap) {
-        if (!snap.hasData) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-          );
-        }
-        final seller = snap.data!.data() as Map<String, dynamic>?;
-        if (seller == null) return const SizedBox();
+    final status = paymentStatus ??
+        (fulfillment == 'pickup' ? 'cash_on_pickup' : 'unpaid');
 
-        final name = seller['fullName'] ?? seller['username'] ?? 'Seller';
-        final phone = seller['phone'] ?? '';
-        final mobilePayment = seller['mobilePayment'] ?? '';
-        final location = seller['location']?['name'] ?? '';
-        final initial = name.isNotEmpty ? name[0].toUpperCase() : 'S';
+    Color color;
+    IconData icon;
+    String label;
+    String sublabel;
 
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: _navy.withValues(alpha: 0.15)),
-            boxShadow: [BoxShadow(color: Colors.grey.shade200, blurRadius: 6)],
-          ),
-          child: Column(
-            children: [
-              // Seller header
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: _navy.withValues(alpha: 0.04),
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(14),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 22,
-                      backgroundColor: _navy.withValues(alpha: 0.12),
-                      child: Text(
-                        initial,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: _navy,
-                          fontSize: 18,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            name,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                              color: Color(0xFF111827),
-                            ),
-                          ),
-                          if (location.isNotEmpty)
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.location_on_outlined,
-                                  size: 12,
-                                  color: Colors.grey.shade500,
-                                ),
-                                const SizedBox(width: 3),
-                                Expanded(
-                                  child: Text(
-                                    location,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey.shade500,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                        ],
-                      ),
-                    ),
-                    // Amount due to this seller
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          lang.isSwahili ? 'Lipa' : 'Pay',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey.shade500,
-                          ),
-                        ),
-                        Text(
-                          'TShs ${amountForSeller.toStringAsFixed(0)}',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                            color: _navy,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+    switch (status) {
+      case 'held_in_escrow':
+        color = Colors.blue.shade700;
+        icon = Icons.lock_outline;
+        label = lang.isSwahili ? 'Imelipwa (Kwenye Amana)' : 'Paid (In Escrow)';
+        sublabel = lang.isSwahili
+            ? 'Malipo yatatolewa unapothibitisha kupokea'
+            : 'Funds released when you confirm receipt';
+        break;
+      case 'released':
+        color = Colors.green.shade700;
+        icon = Icons.check_circle_outline;
+        label = lang.isSwahili ? 'Malipo Yametolewa' : 'Payment Released';
+        sublabel = lang.isSwahili
+            ? 'Muuzaji na dereva wamelipwa'
+            : 'Seller and driver have been paid';
+        break;
+      case 'cash_on_pickup':
+        color = Colors.teal.shade700;
+        icon = Icons.storefront_outlined;
+        label = lang.isSwahili ? 'Lipa Unapochukua' : 'Cash on Pickup';
+        sublabel = lang.isSwahili
+            ? 'Lipa muuzaji unapokwenda kuchukua'
+            : 'Pay the seller when you collect your order';
+        break;
+      case 'pending':
+        color = Colors.orange.shade700;
+        icon = Icons.hourglass_empty;
+        label = lang.isSwahili ? 'Inasubiri Malipo' : 'Awaiting Payment';
+        sublabel = lang.isSwahili
+            ? 'Kamilisha malipo kupitia ClickPesa'
+            : 'Complete payment via ClickPesa';
+        break;
+      case 'failed':
+        color = Colors.red.shade700;
+        icon = Icons.error_outline;
+        label = lang.isSwahili ? 'Malipo Yameshindwa' : 'Payment Failed';
+        sublabel = lang.isSwahili
+            ? 'Jaribu tena au wasiliana na msaada'
+            : 'Please retry or contact support';
+        break;
+      default: // unpaid
+        color = Colors.grey.shade600;
+        icon = Icons.payment_outlined;
+        label = lang.isSwahili ? 'Bado Hajalipwa' : 'Unpaid';
+        sublabel = lang.isSwahili
+            ? 'Malipo yatafanywa baada ya uthibitishaji'
+            : 'Payment processed after order confirmation';
+    }
 
-              // Payment details
-              Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      lang.isSwahili ? 'Njia za Malipo' : 'Payment Methods',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-
-                    // Registered contact phone
-                    if (phone.isNotEmpty)
-                      _paymentRow(
-                        icon: Icons.phone_android,
-                        network: lang.isSwahili
-                            ? 'Simu ya Muuzaji'
-                            : 'Seller Phone',
-                        number: phone,
-                        accountName: name,
-                        color: Colors.blue.shade700,
-                        context: context,
-                      ),
-
-                    // Dedicated mobile payment number
-                    if (mobilePayment.isNotEmpty) ...[
-                      const SizedBox(height: 10),
-                      _paymentRow(
-                        icon: Icons.mobile_friendly,
-                        network: lang.isSwahili
-                            ? 'Nambari ya Malipo ya Simu'
-                            : 'Mobile Payment Number',
-                        number: mobilePayment,
-                        accountName: name,
-                        color: Colors.green.shade700,
-                        context: context,
-                        highlight: true,
-                      ),
-                    ],
-
-                    if (phone.isEmpty && mobilePayment.isEmpty)
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade50,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.orange.shade200),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.warning_amber_outlined,
-                              color: Colors.orange.shade700,
-                              size: 16,
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                lang.isSwahili
-                                    ? 'Muuzaji hajaweka nambari ya malipo. Wasiliana naye moja kwa moja.'
-                                    : 'Seller has not set a payment number. Contact them directly.',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.orange.shade800,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _paymentRow({
-    required IconData icon,
-    required String network,
-    required String number,
-    required String accountName,
-    required Color color,
-    required BuildContext context,
-    bool highlight = false,
-  }) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: highlight ? color.withValues(alpha: 0.06) : Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: highlight
-              ? color.withValues(alpha: 0.3)
-              : Colors.grey.shade200,
-          width: highlight ? 1.5 : 1,
-        ),
+        color: color.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
+              color: color.withValues(alpha: 0.12),
+              shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: color, size: 18),
+            child: Icon(icon, color: color, size: 20),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -1643,67 +1806,21 @@ class _SellerPaymentCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  network,
+                  label,
                   style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey.shade500,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  number,
-                  style: TextStyle(
-                    fontSize: 16,
                     fontWeight: FontWeight.bold,
+                    fontSize: 14,
                     color: color,
-                    letterSpacing: 0.5,
                   ),
                 ),
                 Text(
-                  accountName,
-                  style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                  sublabel,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: color.withValues(alpha: 0.8),
+                  ),
                 ),
               ],
-            ),
-          ),
-          // Copy button
-          GestureDetector(
-            onTap: () {
-              // Copy to clipboard feedback
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    lang.isSwahili
-                        ? 'Nambari imenakiliwa: $number'
-                        : 'Number copied: $number',
-                  ),
-                  duration: const Duration(seconds: 2),
-                  backgroundColor: color,
-                ),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.copy, size: 14, color: color),
-                  const SizedBox(width: 4),
-                  Text(
-                    lang.isSwahili ? 'Nakili' : 'Copy',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: color,
-                    ),
-                  ),
-                ],
-              ),
             ),
           ),
         ],

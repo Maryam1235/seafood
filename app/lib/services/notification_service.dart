@@ -1,97 +1,129 @@
-/**
- * NotificationService — Flutter side
- *
- * Responsibilities:
- *   1. Request notification permission from the device
- *   2. Save the FCM device token to Firestore so Cloud Functions can send pushes
- *   3. Handle foreground/background message events
- *
- * What this does NOT do:
- *   - Does NOT call FCM API directly
- *   - Does NOT hold any server key or service account credentials
- *   - Does NOT send push notifications itself
- *
- * Push notifications are sent by Firebase Cloud Functions (functions/index.js)
- * which run securely on Google's servers using the Firebase Admin SDK.
- */
-
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-// Must be a top-level function — called when app is in background/terminated
+// ── Android notification channels — must match MainActivity.kt ───────────────
+const _ordersChannelId = 'zanseafood_orders';
+const _stockChannelId = 'zanseafood_stock';
+
+final FlutterLocalNotificationsPlugin _localNotif =
+    FlutterLocalNotificationsPlugin();
+
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Firebase SDK automatically shows the notification popup.
-  // Nothing extra needed here unless you want custom handling.
-  debugPrint('Background push received: ${message.notification?.title}');
+  debugPrint('[FCM] Background push: ${message.notification?.title}');
 }
 
 class NotificationService {
   static final _messaging = FirebaseMessaging.instance;
   static final _db = FirebaseFirestore.instance;
+  static int _localId = 0;
 
-  // ── Call once in main.dart before runApp ────────────────────────────────────
+  // ── Init ─────────────────────────────────────────────────────────────────
   static Future<void> init() async {
-    // Register background handler FIRST
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    try {
+      FirebaseMessaging.onBackgroundMessage(
+          _firebaseMessagingBackgroundHandler);
+      await _initLocal();
 
-    // Ask the user for notification permission
-    final settings = await _messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-      provisional: false,
-    );
-    debugPrint('Notification permission: ${settings.authorizationStatus}');
-
-    // Show notification banner even when app is open (foreground)
-    await _messaging.setForegroundNotificationPresentationOptions(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-
-    // Save this device's token so Cloud Functions know where to send pushes
-    await saveFcmToken();
-
-    // Keep token fresh — Firebase rotates tokens occasionally
-    _messaging.onTokenRefresh.listen((newToken) {
-      debugPrint('FCM token refreshed');
-      _saveToken(newToken);
-    });
-
-    // App is open and a push arrives — log it (banner is shown automatically)
-    FirebaseMessaging.onMessage.listen((message) {
-      debugPrint(
-        'Foreground push: ${message.notification?.title} — ${message.notification?.body}',
+      final settings = await _messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        provisional: false,
       );
-    });
+      debugPrint('[FCM] Permission: ${settings.authorizationStatus}');
 
-    // User tapped a notification while app was in background
-    FirebaseMessaging.onMessageOpenedApp.listen((message) {
-      debugPrint('Notification tapped (background): ${message.data}');
-      // TODO: navigate to the relevant order screen based on message.data['orderId']
-    });
+      await _localNotif
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.requestNotificationsPermission();
 
-    // App was fully closed and user tapped the notification to open it
-    final initialMessage = await _messaging.getInitialMessage();
-    if (initialMessage != null) {
-      debugPrint('App opened from notification: ${initialMessage.data}');
-      // TODO: navigate to the relevant order screen
+      await _messaging.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
+      FirebaseMessaging.onMessage.listen((msg) {
+        debugPrint('[FCM] Foreground: ${msg.notification?.title}');
+        _showLocal(msg);
+      });
+
+      await saveFcmToken();
+      _messaging.onTokenRefresh.listen(_saveToken);
+
+      FirebaseMessaging.onMessageOpenedApp.listen(
+        (msg) => debugPrint('[FCM] Tapped (bg): ${msg.data}'),
+      );
+
+      final init = await _messaging.getInitialMessage();
+      if (init != null)
+        debugPrint('[FCM] Opened from terminated: ${init.data}');
+    } catch (e) {
+      debugPrint('[NotificationService] init error (non-fatal): $e');
     }
   }
 
-  // ── Save FCM token to Firestore ─────────────────────────────────────────────
-  // Cloud Functions read this token to know which device to send the push to.
+  static Future<void> _initLocal() async {
+    const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const ios = DarwinInitializationSettings(
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
+    );
+    await _localNotif.initialize(
+      const InitializationSettings(android: android, iOS: ios),
+    );
+  }
+
+  static Future<void> _showLocal(RemoteMessage message) async {
+    final notif = message.notification;
+    if (notif == null) return;
+    final type = message.data['type'] ?? '';
+    final channelId = type == 'low_stock' || type == 'product_low_stock'
+        ? _stockChannelId
+        : _ordersChannelId;
+    final channelName =
+        channelId == _stockChannelId ? 'Stock Alerts' : 'Order Notifications';
+
+    final android = AndroidNotificationDetails(
+      channelId,
+      channelName,
+      importance: Importance.max,
+      priority: Priority.high,
+      playSound: true,
+      enableVibration: true,
+      styleInformation: BigTextStyleInformation(
+        notif.body ?? '',
+        contentTitle: notif.title,
+      ),
+    );
+    const ios = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+    );
+
+    await _localNotif.show(
+      _localId++,
+      notif.title,
+      notif.body,
+      NotificationDetails(android: android, iOS: ios),
+      payload: type,
+    );
+  }
+
+  // ── FCM token ────────────────────────────────────────────────────────────
   static Future<void> saveFcmToken() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
     final token = await _messaging.getToken();
     if (token != null) {
       await _saveToken(token);
-      debugPrint('FCM token saved for user $uid');
+      debugPrint('[FCM] Token saved for $uid');
     }
   }
 
@@ -101,13 +133,15 @@ class NotificationService {
     try {
       await _db.collection('users').doc(uid).update({'fcmToken': token});
     } catch (e) {
-      debugPrint('Failed to save FCM token: $e');
+      debugPrint('[FCM] Save token failed: $e');
     }
   }
 
-  // ── These methods write in-app notifications to Firestore ───────────────────
-  // The Cloud Function (onNewOrder / onOrderUpdated) also sends the real push.
-  // These are called from the app to ensure the in-app bell shows immediately.
+  // ══════════════════════════════════════════════════════════════════════════
+  // Firestore in-app notification writers
+  // Cloud Functions send the real FCM push; these write the in-app bell doc
+  // so the badge refreshes immediately without waiting for a push round-trip.
+  // ══════════════════════════════════════════════════════════════════════════
 
   static Future<void> sendNewOrderNotification({
     required String sellerId,
@@ -116,8 +150,6 @@ class NotificationService {
     required int itemCount,
     required double subtotal,
   }) async {
-    // Cloud Function handles the push. We just write the in-app notification
-    // here so the seller's bell badge updates instantly inside the app.
     await _db.collection('notifications').add({
       'userId': sellerId,
       'type': 'new_order',
@@ -137,8 +169,6 @@ class NotificationService {
     required bool confirmed,
     String? sellerName,
   }) async {
-    // Cloud Function handles the push automatically when order.status changes.
-    // This writes the in-app notification for immediate bell badge update.
     await _db.collection('notifications').add({
       'userId': customerId,
       'type': 'order_status',
@@ -173,6 +203,110 @@ class NotificationService {
     });
   }
 
+  /// Low-stock alert → seller (written by CartService after order transaction).
+  /// Cloud Function `onLowStockNotification` picks this up and sends FCM push.
+  static Future<void> sendLowStockNotification({
+    required String sellerId,
+    required String productId,
+    required String productName,
+    required double remainingStock,
+    required String unit,
+  }) async {
+    final isOut = remainingStock <= 0;
+    await _db.collection('notifications').add({
+      'userId': sellerId,
+      'type': 'low_stock',
+      'title': isOut ? 'Out of Stock ⚠️' : 'Low Stock Alert ⚠️',
+      'body': isOut
+          ? '"$productName" is out of stock. Restock to keep selling.'
+          : '"$productName" has only ${remainingStock.toStringAsFixed(remainingStock.truncateToDouble() == remainingStock ? 0 : 1)} $unit left. Consider restocking soon.',
+      'productId': productId,
+      'productName': productName,
+      'remainingStock': remainingStock,
+      'read': false,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Notifies the customer who just ordered that the product is almost gone.
+  static Future<void> sendCustomerLowStockAlert({
+    required String customerId,
+    required String productName,
+    required double remainingStock,
+    required String unit,
+  }) async {
+    if (remainingStock <= 0) return;
+    await _db.collection('notifications').add({
+      'userId': customerId,
+      'type': 'product_low_stock',
+      'title': 'Almost Sold Out! 🔥',
+      'body': 'You got the last stock! "$productName" only has '
+          '${remainingStock.toStringAsFixed(0)} $unit left now.',
+      'productName': productName,
+      'remainingStock': remainingStock,
+      'read': false,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Notifies seller that a customer cancelled an order.
+  static Future<void> sendOrderCancelledBySeller({
+    required String sellerId,
+    required String orderId,
+    required String reason,
+    required String cancelledBy,
+  }) async {
+    await _db.collection('notifications').add({
+      'userId': sellerId,
+      'type': 'order_cancelled',
+      'title': 'Order Cancelled ❌',
+      'body':
+          'A customer cancelled order #${orderId.substring(0, 6).toUpperCase()}. '
+              'Reason: $reason. Stock has been restored automatically.',
+      'orderId': orderId,
+      'reason': reason,
+      'read': false,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Notifies seller of a new complaint.
+  static Future<void> sendNewComplaintNotification({
+    required String sellerId,
+    required String complaintId,
+    required String orderId,
+    required String category,
+  }) async {
+    await _db.collection('notifications').add({
+      'userId': sellerId,
+      'type': 'new_complaint',
+      'title': 'New Complaint Filed 🚨',
+      'body': 'A customer filed a "$category" complaint on order '
+          '#${orderId.substring(0, 6).toUpperCase()}. Please review and respond.',
+      'complaintId': complaintId,
+      'orderId': orderId,
+      'read': false,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  /// Notifies customer that their complaint got a response.
+  static Future<void> sendComplaintResponseNotification({
+    required String customerId,
+    required String complaintId,
+    required String sellerName,
+  }) async {
+    await _db.collection('notifications').add({
+      'userId': customerId,
+      'type': 'complaint_response',
+      'title': 'Complaint Response 💬',
+      'body': '$sellerName has responded to your complaint.',
+      'complaintId': complaintId,
+      'read': false,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   static Future<void> sendOrderStatusNotification({
     required String customerId,
     required String orderId,
@@ -192,7 +326,6 @@ class NotificationService {
         title = 'Order Update';
         body = 'Your order status: $status';
     }
-
     await _db.collection('notifications').add({
       'userId': customerId,
       'type': 'order_status',
