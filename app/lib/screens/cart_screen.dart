@@ -165,26 +165,23 @@ class CartScreen extends StatelessWidget {
                                             .get(),
                                         builder: (context, stockSnap) {
                                           final stock = stockSnap.hasData
-                                              ? ((stockSnap.data!.data()
-                                                            as Map<
-                                                              String,
-                                                              dynamic
-                                                            >?)?['stock'] ??
-                                                        0)
-                                                    as num
+                                              ? ((stockSnap.data!.data() as Map<
+                                                      String,
+                                                      dynamic>?)?['stock'] ??
+                                                  0) as num
                                               : double.infinity;
                                           final atMax = qty >= stock;
                                           return _qtyBtn(
                                             Icons.add,
                                             atMax
                                                 ? null
-                                                : () => cartService
-                                                      .updateQuantity(
-                                                        item['id'],
-                                                        qty + 1,
-                                                        maxStock: stock
-                                                            .toDouble(),
-                                                      ),
+                                                : () =>
+                                                    cartService.updateQuantity(
+                                                      item['id'],
+                                                      qty + 1,
+                                                      maxStock:
+                                                          stock.toDouble(),
+                                                    ),
                                           );
                                         },
                                       ),
@@ -405,27 +402,31 @@ class _FulfillmentSheetState extends State<_FulfillmentSheet> {
   Future<void> _confirmPickup() async {
     setState(() => _isLoading = true);
     try {
+      // Mark fulfillment as pickup but keep status 'pending' —
+      // the order stays pending until the customer physically
+      // collects the items and taps "I've Collected My Order"
+      // in the Orders screen. That action marks it 'delivered'
+      // and triggers the seller payment / notification.
       await FirebaseFirestore.instance
           .collection('orders')
           .doc(widget.orderId)
           .update({
-            'fulfillment': 'pickup',
-            'grandTotal': widget.orderTotal,
-            'status': 'confirmed',
-          });
+        'fulfillment': 'pickup',
+        'grandTotal': widget.orderTotal,
+        'paymentStatus': 'cash_on_pickup',
+        // status stays 'pending' intentionally
+      });
 
-      // Pickup skips ClickPesa, so feed purchase_history via NestJS.
+      // Feed purchase_history for recommendations
       try {
         await ApiService.post('/recommendations/record-purchase', {
           'orderId': widget.orderId,
         });
       } catch (e) {
-        // Non-fatal: order is confirmed; recommendations can catch up later.
         debugPrint('record-purchase failed for pickup: $e');
       }
 
       if (mounted) {
-        // Close sheet, then show pickup success screen
         final navigator = Navigator.of(context);
         navigator.pop();
         navigator.pushReplacement(

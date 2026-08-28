@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
@@ -1168,8 +1168,12 @@ class _OrderDetailSheet extends StatelessWidget {
                   if (order['estimatedDeliveryAt'] != null) ...[
                     _sectionTitle(
                       lang.isSwahili
-                          ? 'Wakati wa Kufikia'
-                          : 'Estimated Delivery',
+                          ? (fulfillment == 'pickup'
+                              ? 'Wakati wa Kuchukua'
+                              : 'Wakati wa Utoaji')
+                          : (fulfillment == 'pickup'
+                              ? 'Estimated Pickup Time'
+                              : 'Estimated Delivery Time'),
                     ),
                     Container(
                       padding: const EdgeInsets.all(14),
@@ -1187,8 +1191,12 @@ class _OrderDetailSheet extends StatelessWidget {
                             children: [
                               Text(
                                 lang.isSwahili
-                                    ? 'Inatarajiwa Kufikia'
-                                    : 'Expected Arrival',
+                                    ? (fulfillment == 'pickup'
+                                        ? 'Inatarajiwa Kuchukua'
+                                        : 'Inatarajiwa Kufikia')
+                                    : (fulfillment == 'pickup'
+                                        ? 'Ready for Pickup'
+                                        : 'Expected Arrival'),
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: Colors.teal.shade700,
@@ -1218,20 +1226,110 @@ class _OrderDetailSheet extends StatelessWidget {
                   ],
 
                   // â”€â”€ Confirm Receipt â€” delivery + escrow â”€â”€â”€â”€â”€â”€â”€â”€
-                  if (status == 'delivered' &&
-                      order['customerConfirmedReceipt'] != true &&
-                      order['paymentStatus'] == 'held_in_escrow') ...[
+                  // ── Driver on the way — info banner ──────────────
+                  if (fulfillment == 'delivery' &&
+                      delivery != null &&
+                      delivery['driverId'] != null &&
+                      (delivery['status'] == 'picking_up' ||
+                          delivery['status'] == 'on_the_way') &&
+                      order['driverConfirmed'] != true) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.teal.shade50,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.teal.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.delivery_dining,
+                              color: Colors.teal.shade700, size: 22),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              lang.isSwahili
+                                  ? 'Dereva yuko njiani. Utapata taarifa atakapofika.'
+                                  : 'Your driver is on the way.',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.teal.shade800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  // ── Confirm Delivery (customer) ───────────────────────
+                  if (fulfillment == 'delivery' &&
+                      order['driverConfirmed'] == true &&
+                      status != 'delivered') ...[
                     SizedBox(
                       width: double.infinity,
                       height: 54,
                       child: ElevatedButton.icon(
-                        onPressed: () =>
-                            _confirmReceipt(context, orderId, lang),
+                        onPressed: () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (_) => AlertDialog(
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16)),
+                              title: Text(lang.isSwahili
+                                  ? 'Thibitisha Kupokea'
+                                  : 'Confirm Delivery'),
+                              content: Text(lang.isSwahili
+                                  ? 'Je, umepokea bidhaa zako?'
+                                  : 'Have you received your items?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.pop(context, false),
+                                  child: Text(lang.isSwahili ? 'Hapana' : 'No'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () => Navigator.pop(context, true),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green.shade700,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  child: Text(lang.isSwahili
+                                      ? 'Ndiyo, Nimepokea'
+                                      : 'Yes, Received'),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (confirm != true || !context.mounted) return;
+
+                          await FirebaseFirestore.instance
+                              .collection('orders')
+                              .doc(orderId)
+                              .update({
+                            'status': 'delivered',
+                            'customerConfirmedReceipt': true,
+                            'deliveredAt': FieldValue.serverTimestamp(),
+                          });
+
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(lang.isSwahili
+                                    ? 'Asante! Agizo limekamilika.'
+                                    : 'Thank you! Order marked as delivered.'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          }
+                        },
                         icon: const Icon(Icons.check_circle_outline),
                         label: Text(
                           lang.isSwahili
-                              ? 'Thibitisha Kupokea & Lipa'
-                              : 'Confirm Receipt & Release Payment',
+                              ? 'Nimethibitisha Kupokea'
+                              : 'I Received My Order',
                           style: const TextStyle(
                               fontSize: 14, fontWeight: FontWeight.bold),
                         ),
@@ -1249,28 +1347,88 @@ class _OrderDetailSheet extends StatelessWidget {
 
                   // â”€â”€ Confirm Pickup Collection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                   if (fulfillment == 'pickup' &&
-                      status == 'confirmed' &&
+                      (status == 'pending' || status == 'confirmed') &&
                       order['customerConfirmedReceipt'] != true) ...[
                     SizedBox(
                       width: double.infinity,
                       height: 54,
                       child: ElevatedButton.icon(
                         onPressed: () async {
+                          final confirm = await showDialog<bool>(
+                            context: context,
+                            builder: (_) => AlertDialog(
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16)),
+                              title: Text(lang.isSwahili
+                                  ? 'Thibitisha Kuchukua'
+                                  : 'Confirm Collection'),
+                              content: Text(lang.isSwahili
+                                  ? 'Je, umekwisha kuchukua bidhaa zako kutoka kwa muuzaji?'
+                                  : 'Have you collected your items from the seller?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () =>
+                                      Navigator.pop(context, false),
+                                  child: Text(lang.isSwahili ? 'Hapana' : 'No'),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () => Navigator.pop(context, true),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green.shade700,
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  child: Text(lang.isSwahili
+                                      ? 'Ndiyo, Nimechukua'
+                                      : 'Yes, Collected'),
+                                ),
+                              ],
+                            ),
+                          );
+                          if (confirm != true || !context.mounted) return;
+
+                          // Mark delivered + paid — customer confirmed collection
                           await FirebaseFirestore.instance
                               .collection('orders')
                               .doc(orderId)
                               .update({
                             'status': 'delivered',
+                            'paymentStatus': 'paid',
                             'customerConfirmedReceipt': true,
                             'deliveredAt': FieldValue.serverTimestamp(),
                           });
+
+                          // Notify sellers
+                          final oDoc = await FirebaseFirestore.instance
+                              .collection('orders')
+                              .doc(orderId)
+                              .get();
+                          final oItems = (oDoc.data()?['items'] as List?) ?? [];
+                          final sids = oItems
+                              .map((i) => i['sellerId'] as String?)
+                              .whereType<String>()
+                              .toSet();
+                          for (final sid in sids) {
+                            await FirebaseFirestore.instance
+                                .collection('notifications')
+                                .add({
+                              'userId': sid,
+                              'type': 'order_collected',
+                              'title': 'Order Collected ✅',
+                              'body':
+                                  'Customer has confirmed collection. Payment is being processed.',
+                              'orderId': orderId,
+                              'read': false,
+                              'createdAt': FieldValue.serverTimestamp(),
+                            });
+                          }
+
                           if (context.mounted) {
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(lang.isSwahili
-                                    ? 'Asante! Agizo limekamilika.'
-                                    : 'Great! Order marked as collected.'),
+                                    ? 'Asante! Malipo yanashughulikiwa.'
+                                    : 'Thank you! Payment is being processed.'),
                                 backgroundColor: Colors.green,
                               ),
                             );
@@ -1415,76 +1573,6 @@ class _OrderDetailSheet extends StatelessWidget {
         color: Colors.grey.shade100,
         child: Icon(Icons.set_meal, color: Colors.grey.shade300, size: 24),
       );
-
-  // â”€â”€ Confirm receipt & release escrow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  Future<void> _confirmReceipt(
-    BuildContext context,
-    String orderId,
-    LanguageProvider lang,
-  ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          lang.isSwahili ? 'Thibitisha Kupokea' : 'Confirm Receipt',
-        ),
-        content: Text(
-          lang.isSwahili
-              ? 'Je, umepokea bidhaa zako? Malipo yatatolewa kwa muuzaji na dereva.'
-              : 'Have you received your items? Payment will be released to the seller and driver.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text(lang.isSwahili ? 'Hapana' : 'No'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green.shade700,
-              foregroundColor: Colors.white,
-            ),
-            child: Text(lang.isSwahili ? 'Ndiyo, Thibitisha' : 'Yes, Confirm'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !context.mounted) return;
-
-    try {
-      if (context.mounted) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (_) => const Center(child: CircularProgressIndicator()),
-        );
-      }
-      await ApiService.post('/payments/release', {'orderId': orderId});
-      if (context.mounted) {
-        Navigator.pop(context); // loading
-        Navigator.pop(context); // sheet
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(lang.isSwahili
-                ? 'Malipo yametolewa. Asante!'
-                : 'Payment released successfully!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        Navigator.pop(context); // loading
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
 
   // â”€â”€ Cancel order with reason picker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   Future<void> _showCancelDialog(

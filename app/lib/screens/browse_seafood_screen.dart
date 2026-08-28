@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -389,165 +391,262 @@ class _BrowseSeafoodScreenState extends State<BrowseSeafoodScreen> {
   }
 }
 
-class _RecommendedProductsSection extends StatelessWidget {
+class _RecommendedProductsSection extends StatefulWidget {
   final LanguageProvider lang;
   const _RecommendedProductsSection({required this.lang});
 
+  @override
+  State<_RecommendedProductsSection> createState() =>
+      _RecommendedProductsSectionState();
+}
+
+class _RecommendedProductsSectionState
+    extends State<_RecommendedProductsSection> {
   static const _navy = Color(0xFF1E1B4B);
 
-  Future<Set<String>> _purchasedProductIds(String userId) async {
-    final purchasedSnap = await FirebaseFirestore.instance
-        .collection('purchase_history')
-        .where('userId', isEqualTo: userId)
-        .get();
-    return purchasedSnap.docs
-        .map((doc) => doc.data()['productId']?.toString())
-        .whereType<String>()
-        .toSet();
+  List<Map<String, dynamic>> _products = [];
+  bool _firstLoad = true;
+
+  // The seconds value of the last updatedAt we successfully fetched for.
+  // Only the seconds component is used so that the two Firestore snapshot
+  // events (pending local write vs committed server write) — which share the
+  // same seconds but differ in nanoseconds — are treated as one event.
+  int _lastFetchedSeconds = -1;
+
+  StreamSubscription<DocumentSnapshot>? _recSub;
+
+  // ── Lifecycle ─────────────────────────────────────────────────────────────
+
+  @override
+  void initState() {
+    super.initState();
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId != null) _subscribeToRecommendations(userId);
   }
 
-  bool _isSellable(Map<String, dynamic> product) {
-    final stock = (product['stock'] ?? 0) as num;
-    return product['isAvailable'] != false && stock > 0;
+  @override
+  void dispose() {
+    _recSub?.cancel();
+    super.dispose();
+  }
+
+  void _subscribeToRecommendations(String userId) {
+    _recSub = FirebaseFirestore.instance
+        .collection('recommendations')
+        .doc(userId)
+        .snapshots()
+        .listen((snap) {
+      if (!mounted) return;
+      final data = snap.data();
+      if (data == null) {
+        // Doc doesn't exist yet — show popular fallback.
+        _triggerFetch(userId, [], -1);
+        return;
+      }
+
+      final rawTs = data['updatedAt'];
+      // Normalise to seconds only — avoids double-fetch from the two Firestore
+      // events that fire on every write (pending nanoseconds=0 vs committed).
+      final seconds = rawTs is Timestamp ? rawTs.seconds : -1;
+
+      // Skip if we already fetched for this training run.
+      if (seconds == _lastFetchedSeconds && !_firstLoad) return;
+
+      final items = (data['items'] as List?) ?? [];
+      _triggerFetch(userId, items, seconds);
+    });
+  }
+
+  Future<void> _triggerFetch(
+      String userId, List<dynamic> items, int seconds) async {
+    // Mark this seconds value as "in-flight" immediately so a second snapshot
+    // event with the same seconds (committed vs pending) is ignored.
+    _lastFetchedSeconds = seconds;
+
+    final ids = items
+        .whereType<Map>()
+        .map((i) => i['productId']?.toString())
+        .whereType<String>()
+        .toList();
+
+    List<Map<String, dynamic>> loaded = [];
+    if (ids.isNotEmpty) {
+      loaded = await _loadProductsByIds(ids);
+    }
+    if (loaded.isEmpty) {
+      loaded = await _loadPopularFallback();
+    }
+
+    if (mounted) {
+      setState(() {
+        _products = loaded;
+        _firstLoad = false;
+      });
+    }
+  }
+
+  // ── Data loaders ──────────────────────────────────────────────────────────
+
+  bool _isSellable(Map<String, dynamic> p) {
+    final stock = (p['stock'] ?? 0) as num;
+    return p['isAvailable'] != false && stock > 0;
   }
 
   Future<List<Map<String, dynamic>>> _loadProductsByIds(
-    List<String> productIds,
-    Set<String> purchasedIds,
+    List<String> ids,
   ) async {
-    final products = <Map<String, dynamic>>[];
-    for (final productId in productIds.take(10)) {
-      final productSnap = await FirebaseFirestore.instance
-          .collection('products')
-          .doc(productId)
-          .get();
-      if (!productSnap.exists) continue;
-
-      final product = {
-        'id': productSnap.id,
-        ...productSnap.data() as Map<String, dynamic>,
-      };
-      final repeatBuy = product['repeatBuy'] == true;
+    final result = <Map<String, dynamic>>[];
+    for (final id in ids.take(10)) {
+      final snap =
+          await FirebaseFirestore.instance.collection('products').doc(id).get();
+      if (!snap.exists) continue;
+      final product = {'id': snap.id, ...snap.data()!};
       if (!_isSellable(product)) continue;
-      if (purchasedIds.contains(productId) && !repeatBuy) continue;
-      products.add(product);
+      result.add(product);
     }
-    return products;
+    return result;
   }
 
-  /// When no recommendation doc (or all recs filtered out), show available products.
-  Future<List<Map<String, dynamic>>> _loadPopularFallback(
-    Set<String> purchasedIds,
-  ) async {
+  Future<List<Map<String, dynamic>>> _loadPopularFallback() async {
     final snap = await FirebaseFirestore.instance
         .collection('products')
         .where('isAvailable', isEqualTo: true)
         .limit(20)
         .get();
 
-    final products = <Map<String, dynamic>>[];
+    final result = <Map<String, dynamic>>[];
     for (final doc in snap.docs) {
       final product = {'id': doc.id, ...doc.data()};
       final stock = (product['stock'] ?? 0) as num;
-      final repeatBuy = product['repeatBuy'] == true;
       if (stock <= 0) continue;
-      if (purchasedIds.contains(doc.id) && !repeatBuy) continue;
-      products.add(product);
-      if (products.length >= 10) break;
+      result.add(product);
+      if (result.length >= 10) break;
     }
-    return products;
+    return result;
   }
 
-  Future<List<Map<String, dynamic>>> _loadRecommendedProducts(
-    String userId,
-    List<dynamic> recommendationItems,
-  ) async {
-    final purchasedIds = await _purchasedProductIds(userId);
+  // ── Build ─────────────────────────────────────────────────────────────────
 
-    final recommendedIds = recommendationItems
-        .whereType<Map>()
-        .map((item) => item['productId']?.toString())
-        .whereType<String>()
-        .toList();
+  @override
+  Widget build(BuildContext context) {
+    if (_firstLoad) return _Shimmer();
+    if (_products.isEmpty) return const SizedBox.shrink();
 
-    if (recommendedIds.isNotEmpty) {
-      final products = await _loadProductsByIds(recommendedIds, purchasedIds);
-      if (products.isNotEmpty) return products;
-    }
+    return Container(
+      color: const Color(0xFFF5F6FA),
+      padding: const EdgeInsets.fromLTRB(16, 16, 0, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Row(
+              children: [
+                const Icon(Icons.auto_awesome, color: _navy, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  widget.lang.isSwahili
+                      ? 'Mapendekezo Kwako'
+                      : 'Recommended For You',
+                  style: const TextStyle(
+                    color: _navy,
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            height: 210,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _products.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (context, index) => _RecommendedProductCard(
+                product: _products[index],
+                lang: widget.lang,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-    // Cold-start / empty recs / all recs out of stock → popular available products.
-    return _loadPopularFallback(purchasedIds);
+// ── Shimmer placeholder shown on first load only ──────────────────────────────
+class _Shimmer extends StatefulWidget {
+  @override
+  State<_Shimmer> createState() => _ShimmerState();
+}
+
+class _ShimmerState extends State<_Shimmer>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+    _anim = Tween<double>(begin: 0.3, end: 0.7).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) return const SizedBox.shrink();
-
-    return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('recommendations')
-          .doc(userId)
-          .snapshots(),
-      builder: (context, snapshot) {
-        final data = snapshot.data?.data() as Map<String, dynamic>?;
-        final items = (data?['items'] as List?) ?? [];
-
-        return FutureBuilder<List<Map<String, dynamic>>>(
-          // Include item count in future identity so Stream updates re-fetch.
-          future: _loadRecommendedProducts(userId, items),
-          builder: (context, productSnap) {
-            if (productSnap.connectionState == ConnectionState.waiting &&
-                !productSnap.hasData) {
-              return const SizedBox.shrink();
-            }
-            final products = productSnap.data ?? [];
-            if (products.isEmpty) return const SizedBox.shrink();
-
-            return Container(
-              color: const Color(0xFFF5F6FA),
-              padding: const EdgeInsets.fromLTRB(16, 16, 0, 4),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(right: 16),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.auto_awesome, color: _navy, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          lang.isSwahili
-                              ? 'Mapendekezo Kwako'
-                              : 'Recommended For You',
-                          style: const TextStyle(
-                            color: _navy,
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    height: 210,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: products.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 12),
-                      itemBuilder: (context, index) => _RecommendedProductCard(
-                        product: products[index],
-                        lang: lang,
-                      ),
-                    ),
-                  ),
-                ],
+    return Container(
+      color: const Color(0xFFF5F6FA),
+      padding: const EdgeInsets.fromLTRB(16, 16, 0, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Title shimmer
+          AnimatedBuilder(
+            animation: _anim,
+            builder: (_, __) => Container(
+              height: 18,
+              width: 180,
+              decoration: BoxDecoration(
+                color: Colors.grey.withValues(alpha: _anim.value),
+                borderRadius: BorderRadius.circular(8),
               ),
-            );
-          },
-        );
-      },
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Card shimmer row
+          SizedBox(
+            height: 210,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: 4,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (_, __) => AnimatedBuilder(
+                animation: _anim,
+                builder: (_, __) => Container(
+                  width: 150,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: _anim.value),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

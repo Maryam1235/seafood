@@ -3,7 +3,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import '../providers/language_provider.dart';
-import '../services/notification_service.dart';
 
 class DriverNotificationsScreen extends StatefulWidget {
   final VoidCallback? onOpenDrawer;
@@ -70,17 +69,17 @@ class _DriverNotificationsScreenState extends State<DriverNotificationsScreen> {
             );
           }
 
-          // Sort newest first client-side
+          // Sort newest first client-side — no composite index required
           final docs = [...snapshot.data!.docs];
           docs.sort((a, b) {
             final aTs =
                 ((a.data() as Map<String, dynamic>)['createdAt'] as Timestamp?)
-                    ?.millisecondsSinceEpoch ??
-                0;
+                        ?.millisecondsSinceEpoch ??
+                    0;
             final bTs =
                 ((b.data() as Map<String, dynamic>)['createdAt'] as Timestamp?)
-                    ?.millisecondsSinceEpoch ??
-                0;
+                        ?.millisecondsSinceEpoch ??
+                    0;
             return bTs.compareTo(aTs);
           });
 
@@ -115,9 +114,8 @@ class _DriverNotificationsScreenState extends State<DriverNotificationsScreen> {
                     color: isRead ? Colors.white : Colors.teal.shade50,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
-                      color: isRead
-                          ? Colors.grey.shade200
-                          : Colors.teal.shade200,
+                      color:
+                          isRead ? Colors.grey.shade200 : Colors.teal.shade200,
                       width: isRead ? 1 : 1.5,
                     ),
                     boxShadow: [
@@ -359,18 +357,24 @@ class _DriverNotificationsScreenState extends State<DriverNotificationsScreen> {
     });
     await notifRef.update({'read': true, 'accepted': true});
 
-    // Notify customer that driver is on the way
+    // Notify customer that a driver has been assigned and is coming
     final orderDoc = await FirebaseFirestore.instance
         .collection('orders')
         .doc(orderId)
         .get();
     final customerId = orderDoc.data()?['customerId'];
     if (customerId != null) {
-      await NotificationService.sendOrderStatusNotification(
-        customerId: customerId,
-        orderId: orderId,
-        status: 'confirmed',
-      );
+      // Write an in-app notification — driver assigned, not "order confirmed"
+      await FirebaseFirestore.instance.collection('notifications').add({
+        'userId': customerId,
+        'type': 'driver_assigned',
+        'title': 'Driver On the Way 🚗',
+        'body':
+            'A driver has accepted your delivery and is heading to pick up your order.',
+        'orderId': orderId,
+        'read': false,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
     }
 
     if (context.mounted) {
