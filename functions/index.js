@@ -47,7 +47,7 @@ async function getToken(uid) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Helper: send push via FCM HTTP v1 API (Admin SDK handles auth automatically)
 // ─────────────────────────────────────────────────────────────────────────────
-async function sendPush({ token, title, body, data = {} }) {
+async function sendPush({ token, title, body, data = {}, channelId = 'zanseafood_orders' }) {
   if (!token) {
     console.log('sendPush: no token, skipping');
     return;
@@ -57,11 +57,11 @@ async function sendPush({ token, title, body, data = {} }) {
     token,
     notification: { title, body },
 
-    // Android — high priority so it wakes the screen
+    // Android — high priority so it wakes the screen and shows a heads-up banner
     android: {
       priority: 'high',
       notification: {
-        channelId: 'zanseafood_orders',
+        channelId,          // uses the channel passed in (stock or orders)
         sound: 'default',
         priority: 'high',
         defaultVibrateTimings: true,
@@ -81,7 +81,7 @@ async function sendPush({ token, title, body, data = {} }) {
       },
     },
 
-    // Data payload — Flutter app can read this on tap
+    // Data payload — Flutter app reads this to decide routing on tap
     data: Object.fromEntries(
       Object.entries(data).map(([k, v]) => [k, String(v)])
     ),
@@ -189,6 +189,9 @@ exports.onOrderUpdated = onDocumentUpdated(
     const customerId   = after.customerId;
 
     // ── 2a. pending → confirmed (seller confirmed) → notify customer ──────────
+    // Only fire this notification when the seller explicitly confirms.
+    // Driver assignment and pickup selection do NOT change order status anymore,
+    // so this only triggers from seller_orders_screen confirming the order.
     if (statusBefore === 'pending' && statusAfter === 'confirmed') {
       const title = 'Order Confirmed ✅';
       const body  = 'Your order has been confirmed by the seller. Please choose how you want to receive it.';
@@ -236,22 +239,62 @@ exports.onOrderUpdated = onDocumentUpdated(
       });
     }
 
-    // ── 2c. any → delivered (driver delivered) → notify customer ─────────────
+    // ── 2c. driverConfirmed becomes true → prompt customer to confirm ─────────
+    const driverConfirmedBefore = before.driverConfirmed === true;
+    const driverConfirmedAfter  = after.driverConfirmed === true;
+
+    if (!driverConfirmedBefore && driverConfirmedAfter) {
+      const title = 'Confirm Your Delivery 📦';
+      const body  = 'Your driver has arrived. Please confirm you received your items.';
+
+      await storeNotification({
+        userId: customerId, type: 'order_status',
+        title, body, orderId,
+        extra: { status: 'driver_confirmed' },
+      });
+
+      const token = await getToken(customerId);
+      await sendPush({
+        token, title, body,
+        data: { orderId, type: 'order_status', status: 'driver_confirmed' },
+      });
+    }
+
+    // ── 2e. any → delivered → notify customer and driver ─────────────────────
+    // Fires for both delivery (customer confirmed) and pickup paths.
     if (statusBefore !== 'delivered' && statusAfter === 'delivered') {
-      const title = 'Order Delivered 🎉';
-      const body  = 'Your seafood order has been delivered. Enjoy your meal!';
+      const isDelivery = !!(after.delivery?.driverId);
+      const title = 'Order Complete 🎉';
+      const body  = isDelivery
+        ? 'You confirmed receipt. Your order is complete!'
+        : 'Your order has been collected. Thank you!';
 
       await storeNotification({
         userId: customerId, type: 'order_status',
         title, body, orderId,
         extra: { status: 'delivered' },
       });
-
       const token = await getToken(customerId);
       await sendPush({
         token, title, body,
         data: { orderId, type: 'order_status', status: 'delivered' },
       });
+
+      // Notify the driver their job is done
+      const driverId = after.delivery?.driverId;
+      if (driverId) {
+        const titleDriver = 'Delivery Complete ✅';
+        const bodyDriver  = `Customer confirmed delivery for order #${orderId.substring(0, 6).toUpperCase()}.`;
+        await storeNotification({
+          userId: driverId, type: 'delivery_complete',
+          title: titleDriver, body: bodyDriver, orderId,
+        });
+        const driverToken = await getToken(driverId);
+        await sendPush({
+          token: driverToken, title: titleDriver, body: bodyDriver,
+          data: { orderId, type: 'delivery_complete' },
+        });
+      }
     }
 
     // ── 2d. driver assigned → notify driver ───────────────────────────────────
@@ -285,6 +328,57 @@ exports.onOrderUpdated = onDocumentUpdated(
         data: { orderId, type: 'new_delivery', vehicleType, customerName },
       });
     }
+  }
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TRIGGER 3 — Low-stock notification created → send FCM push to seller
+//
+// Fires whenever the Flutter app writes a `low_stock` notification doc to
+// Firestore (done by CartService after a successful order transaction).
+// The Cloud Function reads the seller's FCM token and sends a real push so
+// the seller is alerted even when the app is closed.
+// ─────────────────────────────────────────────────────────────────────────────
+exports.onLowStockNotification = onDocumentCreated(
+  { document: 'notifications/{notifId}', region: 'us-central1' },
+  async (event) => {
+    const notif = event.data.data();
+
+    // Only handle low_stock notifications
+    if (notif.type !== 'low_stock') return;
+
+    const sellerId    = notif.userId;
+    const productName = notif.productName || 'Product';
+    const stock       = notif.remainingStock;
+    const unit        = notif.unit || 'unit';
+    const productId   = notif.productId || '';
+
+    if (!sellerId) {
+      console.log('onLowStockNotification: no sellerId, skipping');
+      return;
+    }
+
+    const isOut   = stock <= 0;
+    const title   = isOut ? 'Out of Stock ⚠️' : 'Low Stock Alert ⚠️';
+    const body    = isOut
+      ? `"${productName}" is out of stock. Restock to keep selling.`
+      : `"${productName}" has only ${stock} ${unit} left. Consider restocking soon.`;
+
+    console.log(`onLowStockNotification: sending push to seller ${sellerId} for "${productName}" (stock=${stock})`);
+
+    const token = await getToken(sellerId);
+    await sendPush({
+      token,
+      title,
+      body,
+      data: {
+        type: 'low_stock',
+        productId,
+        productName,
+        remainingStock: String(stock),
+      },
+      channelId: 'zanseafood_stock',   // dedicated stock-alert channel
+    });
   }
 );
 

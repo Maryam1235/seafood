@@ -86,7 +86,7 @@ export default function Overview() {
   const pending      = orders.filter(o => o.status === 'pending').length;
   const delivered    = orders.filter(o => o.status === 'delivered').length;
   const totalRev     = orders
-    .filter(o => o.status === 'delivered')
+    .filter(o => o.status === 'confirmed' || o.status === 'delivered')
     .reduce((s, o) => s + (o.grandTotal || o.total || 0), 0);
   const completionPct = orders.length
     ? Math.round((delivered / orders.length) * 100) : 0;

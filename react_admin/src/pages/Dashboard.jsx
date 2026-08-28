@@ -8,6 +8,7 @@ import OrdersTable from '../components/OrdersTable';
 import DeliveryManagement from '../components/DeliveryManagement';
 import Reports from '../components/Reports';
 import Settings from '../components/Settings';
+import ComplaintsManagement from '../components/ComplaintsManagement';
 import AddUser from './AddUser';
 import EditUser from './EditUser';
 import AddProduct from './AddProduct';
@@ -42,8 +43,9 @@ export default function Dashboard() {
         onEditProduct={(product) => setSubPage({ type: 'editProduct', product })}
       />;
       case 'orders': return <OrdersTable />;
-      case 'delivery': return <DeliveryManagement />;
-      case 'reports': return <Reports />;
+      case 'delivery':    return <DeliveryManagement />;
+      case 'complaints':  return <ComplaintsManagement />;
+      case 'reports':     return <Reports />;
       case 'settings': return <Settings />;
       default: return <Overview />;
     }

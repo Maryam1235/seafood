@@ -1,24 +1,26 @@
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase';
 import { useEffect, useState } from 'react';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
-import { LayoutDashboard, Users, Fish, ShoppingBag, Truck, Settings, LogOut, BarChart2 } from 'lucide-react';
+import { LayoutDashboard, Users, Fish, ShoppingBag, Truck, Settings, LogOut, BarChart2, MessageSquareDot } from 'lucide-react';
 import styles from './Sidebar.module.css';
 
 const navItems = [
-  { id: 'overview',  label: 'Dashboard',          icon: LayoutDashboard },
-  { id: 'users',     label: 'User Management',     icon: Users },
-  { id: 'products',  label: 'Products Management', icon: Fish },
-  { id: 'orders',    label: 'Orders Management',   icon: ShoppingBag },
-  { id: 'delivery',  label: 'Delivery Management', icon: Truck },
-  { id: 'reports',   label: 'Reports & Analytics', icon: BarChart2 },
-  { id: 'settings',  label: 'Settings',            icon: Settings },
+  { id: 'overview',    label: 'Dashboard',            icon: LayoutDashboard   },
+  { id: 'users',       label: 'User Management',       icon: Users             },
+  { id: 'products',    label: 'Products Management',   icon: Fish              },
+  { id: 'orders',      label: 'Orders Management',     icon: ShoppingBag       },
+  { id: 'delivery',    label: 'Delivery Management',   icon: Truck             },
+  { id: 'complaints',  label: 'Complaints Management', icon: MessageSquareDot  },
+  { id: 'reports',     label: 'Reports & Analytics',   icon: BarChart2         },
+  { id: 'settings',    label: 'Settings',              icon: Settings          },
 ];
 
 export default function Sidebar({ activePage, setActivePage, collapsed }) {
-  const [username, setUsername] = useState('');
-  const [search, setSearch]     = useState('');
+  const [username, setUsername]         = useState('');
+  const [search, setSearch]             = useState('');
+  const [openComplaints, setOpenComplaints] = useState(0);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -29,6 +31,13 @@ export default function Sidebar({ activePage, setActivePage, collapsed }) {
       }
     };
     fetchUser();
+
+    // Live badge: count open complaints
+    const unsub = onSnapshot(
+      query(collection(db, 'complaints'), where('status', '==', 'open')),
+      snap => setOpenComplaints(snap.size),
+    );
+    return unsub;
   }, []);
 
   return (
@@ -81,6 +90,21 @@ export default function Sidebar({ activePage, setActivePage, collapsed }) {
               >
                 <Icon size={18} />
                 {!collapsed && <span>{item.label}</span>}
+                {/* Live badge for open complaints */}
+                {item.id === 'complaints' && openComplaints > 0 && (
+                  <span style={{
+                    marginLeft: 'auto',
+                    background: '#ef4444',
+                    color: 'white',
+                    fontSize: 10,
+                    fontWeight: 700,
+                    padding: '2px 6px',
+                    borderRadius: 10,
+                    lineHeight: 1,
+                  }}>
+                    {openComplaints > 99 ? '99+' : openComplaints}
+                  </span>
+                )}
               </button>
             );
           })}

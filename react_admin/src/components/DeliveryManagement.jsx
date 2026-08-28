@@ -384,6 +384,132 @@ export default function DeliveryManagement() {
                 <div className={styles.noDriverCard}>No driver assigned yet</div>
               )}
 
+              {/* ── Delivery Route Map ── */}
+              {viewOrder.driver && (() => {
+                const driverLat  = viewOrder.driver?.location?.latitude;
+                const driverLng  = viewOrder.driver?.location?.longitude;
+                const custLat    = viewOrder.customer?.location?.latitude;
+                const custLng    = viewOrder.customer?.location?.longitude;
+
+                // Get seller coords from first item's sellerId
+                const sellerId   = (viewOrder.items || [])[0]?.sellerId;
+                const sellerUser = sellerId ? users[sellerId] : null;
+                const sellerLat  = sellerUser?.location?.latitude;
+                const sellerLng  = sellerUser?.location?.longitude;
+
+                const hasDriver   = driverLat && driverLng;
+                const hasCustomer = custLat && custLng;
+                const hasSeller   = sellerLat && sellerLng;
+
+                if (!hasDriver && !hasCustomer) return null;
+
+                // ── Build Google Maps directions URL (opens in browser tab) ──
+                // Route: Driver → Seller (pickup) → Customer (dropoff)
+                let mapsUrl;
+                if (hasDriver && hasSeller && hasCustomer) {
+                  mapsUrl = `https://www.google.com/maps/dir/?api=1`
+                    + `&origin=${driverLat},${driverLng}`
+                    + `&waypoints=${sellerLat},${sellerLng}`
+                    + `&destination=${custLat},${custLng}`
+                    + `&travelmode=driving`;
+                } else if (hasDriver && hasCustomer) {
+                  mapsUrl = `https://www.google.com/maps/dir/?api=1`
+                    + `&origin=${driverLat},${driverLng}`
+                    + `&destination=${custLat},${custLng}`
+                    + `&travelmode=driving`;
+                } else {
+                  mapsUrl = `https://www.google.com/maps/search/?api=1&query=${custLat},${custLng}`;
+                }
+
+                // ── Build OpenStreetMap embed URL ──────────────────────────
+                // OpenStreetMap with markers — free, no API key, no billing.
+                // We center the map on the midpoint of all known points and
+                // add individual marker overlays.
+                const points = [];
+                if (hasDriver)   points.push([driverLat,  driverLng]);
+                if (hasSeller)   points.push([sellerLat,  sellerLng]);
+                if (hasCustomer) points.push([custLat,    custLng]);
+
+                // Calculate bounding box center + zoom
+                const lats = points.map(p => p[0]);
+                const lngs = points.map(p => p[1]);
+                const centerLat = (Math.min(...lats) + Math.max(...lats)) / 2;
+                const centerLng = (Math.min(...lngs) + Math.max(...lngs)) / 2;
+
+                // Build marker params for OSM embed
+                // OSM embed supports: marker=lat,lng
+                const markerParams = points
+                  .map(p => `marker=${p[0]},${p[1]}`)
+                  .join('&');
+
+                const osmEmbedUrl = `https://www.openstreetmap.org/export/embed.html`
+                  + `?bbox=${Math.min(...lngs) - 0.01},${Math.min(...lats) - 0.01},${Math.max(...lngs) + 0.01},${Math.max(...lats) + 0.01}`
+                  + `&layer=mapnik`
+                  + `&${markerParams}`;
+
+                return (
+                  <div>
+                    <div className={styles.sectionTitle} style={{ marginTop: 16 }}>
+                      <MapPin size={13} /> Delivery Route
+                    </div>
+
+                    {/* Map iframe — OpenStreetMap, free, no API key */}
+                    <div className={styles.mapWrap}>
+                      <iframe
+                        title="Delivery Route Map"
+                        src={osmEmbedUrl}
+                        className={styles.mapIframe}
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                        sandbox="allow-scripts allow-same-origin"
+                      />
+
+                      {/* Legend */}
+                      <div className={styles.mapLegend}>
+                        {hasDriver   && <span className={styles.legendItem}><span className={styles.dot} style={{background:'#3b82f6'}}/>Driver</span>}
+                        {hasSeller   && <span className={styles.legendItem}><span className={styles.dot} style={{background:'#f97316'}}/>Seller (Pickup)</span>}
+                        {hasCustomer && <span className={styles.legendItem}><span className={styles.dot} style={{background:'#ef4444'}}/>Customer (Delivery)</span>}
+                      </div>
+
+                      {/* Open full route in Google Maps (real driving directions) */}
+                      <a
+                        href={mapsUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={styles.openMapBtn}
+                      >
+                        <MapPin size={14} /> Open Full Route in Google Maps
+                      </a>
+                    </div>
+
+                    {/* Coordinates summary cards */}
+                    <div className={styles.coordsGrid}>
+                      {hasDriver && (
+                        <div className={styles.coordCard} style={{ borderLeft: '3px solid #3b82f6' }}>
+                          <div className={styles.coordLabel}>🚗 Driver (Current location)</div>
+                          <div className={styles.coordName}>{viewOrder.driver?.fullName || viewOrder.driver?.username}</div>
+                          <div className={styles.coordLoc}>{viewOrder.driver?.location?.name || `${driverLat?.toFixed(4)}, ${driverLng?.toFixed(4)}`}</div>
+                        </div>
+                      )}
+                      {hasSeller && sellerUser && (
+                        <div className={styles.coordCard} style={{ borderLeft: '3px solid #f97316' }}>
+                          <div className={styles.coordLabel}>🏪 Seller (Pickup point)</div>
+                          <div className={styles.coordName}>{sellerUser?.fullName || sellerUser?.username}</div>
+                          <div className={styles.coordLoc}>{sellerUser?.location?.name || `${sellerLat?.toFixed(4)}, ${sellerLng?.toFixed(4)}`}</div>
+                        </div>
+                      )}
+                      {hasCustomer && (
+                        <div className={styles.coordCard} style={{ borderLeft: '3px solid #ef4444' }}>
+                          <div className={styles.coordLabel}>📍 Customer (Delivery point)</div>
+                          <div className={styles.coordName}>{viewOrder.customer?.fullName || viewOrder.customer?.username}</div>
+                          <div className={styles.coordLoc}>{viewOrder.customer?.location?.name || `${custLat?.toFixed(4)}, ${custLng?.toFixed(4)}`}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Items */}
               <div className={styles.sectionTitle}><Package size={13} /> Items</div>
               <div className={styles.itemsList}>

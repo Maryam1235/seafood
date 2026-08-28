@@ -107,8 +107,8 @@ export default function OrdersTable() {
           { label: 'Cancelled',    value: orders.filter(o => o.status === 'cancelled').length,    color: '#dc2626', bg: '#fee2e2' },
           { label: 'Revenue',
             value: 'TShs ' + orders
-              .filter(o => o.status === 'delivered')
-              .reduce((sum, o) => sum + (o.total || 0), 0)
+              .filter(o => o.status === 'confirmed' || o.status === 'delivered')
+              .reduce((sum, o) => sum + (o.grandTotal || o.total || 0), 0)
               .toLocaleString(),
             color: '#065f46', bg: '#d1fae5', small: true },
         ].map(s => (

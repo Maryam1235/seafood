@@ -180,8 +180,9 @@ export default function Reports() {
   }, []);
 
   const delivered   = orders.filter(o => o.status === 'delivered');
-  const totalRev    = delivered.reduce((s, o) => s + (o.grandTotal || o.total || 0), 0);
-  const deliveryRev = delivered.reduce((s, o) => s + (o.delivery?.cost || 0), 0);
+  const paidOrders  = orders.filter(o => o.status === 'confirmed' || o.status === 'delivered');
+  const totalRev    = paidOrders.reduce((s, o) => s + (o.grandTotal || o.total || 0), 0);
+  const deliveryRev = paidOrders.reduce((s, o) => s + (o.delivery?.cost || 0), 0);
   const avgOrder    = delivered.length ? totalRev / delivered.length : 0;
 
   const months = last6Months();

@@ -21,6 +21,10 @@ _EVENT_WEIGHTS = {
     "purchase": 5.0,
 }
 
+# Half-life used for recency decay: purchases older than this many days
+# are worth half the recency score of a purchase made today.
+_RECENCY_HALF_LIFE_DAYS = float(os.getenv("RECENCY_HALF_LIFE_DAYS", "30"))
+
 
 class RecommendationEngine:
     """
@@ -35,9 +39,12 @@ class RecommendationEngine:
         self.db = db
         self.top_n = int(os.getenv("TOP_N", "10"))
         self.min_similarity = float(os.getenv("MIN_SIMILARITY", "0.0"))
-        self.w_cf = float(os.getenv("W_CF", "0.45"))
+        # Hybrid score weights — must sum to 1.0.
+        # Recency is carved out of the CF weight so the total stays stable.
+        self.w_cf = float(os.getenv("W_CF", "0.30"))
         self.w_content = float(os.getenv("W_CONTENT", "0.35"))
         self.w_pop = float(os.getenv("W_POP", "0.20"))
+        self.w_recency = float(os.getenv("W_RECENCY", "0.15"))
 
     def train(self) -> dict[str, Any]:
         purchases = self._load_purchase_history()
@@ -71,6 +78,7 @@ class RecommendationEngine:
         similarity = self._cosine_similarity(matrix)
         popular_scores = self._popularity_scores(purchases, interactions, products)
         category_index = self._build_category_index(products)
+        recency_scores = self._recency_scores(purchases)
 
         batch = self.db.batch()
         ops = 0
@@ -88,6 +96,7 @@ class RecommendationEngine:
                 similarity=similarity,
                 popular_scores=popular_scores,
                 category_index=category_index,
+                recency_scores=recency_scores,
             )
             if not recommendations:
                 recommendations = self._catalog_fallback(
@@ -135,6 +144,7 @@ class RecommendationEngine:
                 "cf": self.w_cf,
                 "content": self.w_content,
                 "popularity": self.w_pop,
+                "recency": self.w_recency,
             },
         }
 
@@ -159,6 +169,7 @@ class RecommendationEngine:
         similarity = self._cosine_similarity(matrix)
         popular_scores = self._popularity_scores(purchases, interactions, products)
         category_index = self._build_category_index(products)
+        recency_scores = self._recency_scores(purchases)
         return {
             "userId": user_id,
             "recommendations": self._hybrid_recommend(
@@ -172,6 +183,7 @@ class RecommendationEngine:
                 similarity,
                 popular_scores,
                 category_index,
+                recency_scores=recency_scores,
             ),
             "source": "hybrid_live",
         }
@@ -327,6 +339,79 @@ class RecommendationEngine:
 
     # ── hybrid scoring ────────────────────────────────────────────────────────
 
+    @staticmethod
+    def _purchase_timestamp(purchase: dict[str, Any]) -> datetime | None:
+        """
+        Return a timezone-aware datetime for a purchase document.
+        Handles both field names in use:
+          - 'purchaseDate'  (written by NestJS RecommendationsService)
+          - 'createdAt'     (written by Flutter CartService)
+        Firestore Timestamps are converted to datetime; plain strings are
+        parsed as ISO-8601.  Returns None when no usable timestamp is found.
+        """
+        raw = purchase.get("purchaseDate") or purchase.get("createdAt")
+        if raw is None:
+            return None
+        # Firestore Timestamp object → datetime
+        if hasattr(raw, "toDatetime") and callable(raw.toDatetime):
+            dt = raw.toDatetime()
+        elif hasattr(raw, "seconds"):
+            # google.protobuf Timestamp or similar
+            dt = datetime.fromtimestamp(raw.seconds, tz=timezone.utc)
+        elif isinstance(raw, datetime):
+            dt = raw
+        elif isinstance(raw, str):
+            try:
+                dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            except ValueError:
+                return None
+        else:
+            return None
+
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+
+    def _recency_scores(
+        self,
+        purchases: list[dict[str, Any]],
+    ) -> dict[str, dict[str, float]]:
+        """
+        For every (userId, productId) pair compute a recency score in [0, 1].
+
+        Score = exp(-λ * age_days) where λ = ln(2) / RECENCY_HALF_LIFE_DAYS.
+        The most recent purchase (age 0) scores 1.0; a purchase exactly
+        RECENCY_HALF_LIFE_DAYS old scores 0.5; older purchases score lower.
+
+        Only the *most recent* purchase of a product per user is used so that
+        repeat buyers aren't doubly penalised.
+
+        Returns:  { userId: { productId: score } }
+        """
+        lam = math.log(2) / _RECENCY_HALF_LIFE_DAYS
+        now = datetime.now(timezone.utc)
+
+        # Keep the most recent timestamp per (user, product).
+        latest: dict[tuple[str, str], datetime] = {}
+        for purchase in purchases:
+            uid = purchase.get("userId")
+            pid = purchase.get("productId")
+            if not uid or not pid:
+                continue
+            dt = self._purchase_timestamp(purchase)
+            if dt is None:
+                continue
+            key = (uid, pid)
+            if key not in latest or dt > latest[key]:
+                latest[key] = dt
+
+        result: dict[str, dict[str, float]] = defaultdict(dict)
+        for (uid, pid), dt in latest.items():
+            age_days = max((now - dt).total_seconds() / 86400.0, 0.0)
+            result[uid][pid] = math.exp(-lam * age_days)
+
+        return result
+
     def _user_signals(
         self,
         user_id: str,
@@ -383,6 +468,7 @@ class RecommendationEngine:
         similarity: np.ndarray,
         popular_scores: dict[str, float],
         category_index: dict[str, list[str]],
+        recency_scores: dict[str, dict[str, float]] | None = None,
     ) -> list[dict[str, Any]]:
         interacted, category_weights, top_category = self._user_signals(
             user_id, purchases, interactions, products,
@@ -390,6 +476,9 @@ class RecommendationEngine:
         reverse_product_index = {
             index: product_id for product_id, index in product_index.items()
         }
+
+        # Per-user recency map: { productId: score }
+        user_recency: dict[str, float] = (recency_scores or {}).get(user_id, {})
 
         # CF scores from item similarity × user vector.
         cf_raw: dict[str, float] = {pid: 0.0 for pid in products}
@@ -427,23 +516,30 @@ class RecommendationEngine:
         scored: list[dict[str, Any]] = []
         for pid, product in products.items():
             repeat_buy = bool(product.get("repeatBuy"))
+            # Products the user bought before are excluded unless repeatBuy is
+            # set, BUT we still want to recommend similar products — only skip
+            # if it's a direct re-purchase that isn't flagged repeatable.
             if pid in interacted and not repeat_buy:
                 continue
 
             cf_n = cf_raw.get(pid, 0.0) / max_cf
             content_n = content_raw.get(pid, 0.0)
             pop_n = float(popular_scores.get(pid, 0.15))
+            # Recency score: 1.0 = purchased today, decays toward 0 over time.
+            # Products never purchased by this user score 0.0 here.
+            rec_n = float(user_recency.get(pid, 0.0))
 
             hybrid = (
                 self.w_cf * max(cf_n, 0.0)
                 + self.w_content * content_n
                 + self.w_pop * pop_n
+                + self.w_recency * rec_n
             )
             if hybrid <= 0 and not interacted:
                 # Pure cold-start: popularity alone is enough to rank.
                 hybrid = pop_n * self.w_pop + 0.05
 
-            reason = self._pick_reason(cf_n, content_n, pop_n)
+            reason = self._pick_reason(cf_n, content_n, pop_n, rec_n)
             scored.append(
                 {
                     "productId": pid,
@@ -453,11 +549,18 @@ class RecommendationEngine:
                         "cf": round(float(cf_n), 4),
                         "content": round(float(content_n), 4),
                         "popularity": round(float(pop_n), 4),
+                        "recency": round(float(rec_n), 4),
                     },
                 }
             )
 
-        scored.sort(key=lambda item: item["score"], reverse=True)
+        # Primary sort: hybrid score descending.
+        # Tie-break: recency descending — so among equal-scored items the
+        # most recently purchased one always surfaces first.
+        scored.sort(
+            key=lambda item: (item["score"], item["components"]["recency"]),
+            reverse=True,
+        )
 
         # Prefer same-category items near the top when user has a clear preference.
         if top_category and category_weights:
@@ -475,11 +578,12 @@ class RecommendationEngine:
 
         return scored[: self.top_n]
 
-    def _pick_reason(self, cf_n: float, content_n: float, pop_n: float) -> str:
+    def _pick_reason(self, cf_n: float, content_n: float, pop_n: float, rec_n: float = 0.0) -> str:
         best = max(
             (cf_n, "similar_to_previous_activity"),
             (content_n, "same_category_preference"),
             (pop_n, "popular_product"),
+            (rec_n, "recently_purchased"),
             key=lambda pair: pair[0],
         )
         if best[0] <= 0.05:
@@ -573,10 +677,17 @@ class RecommendationEngine:
         for purchase in purchases:
             by_user[purchase["userId"]].append(purchase)
 
+        # Use _purchase_timestamp so both 'purchaseDate' (NestJS) and
+        # 'createdAt' (Flutter) docs sort correctly.
+        _epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+
         test_items: dict[str, str] = {}
         train_purchases: list[dict[str, Any]] = []
         for user_id, items in by_user.items():
-            items = sorted(items, key=lambda item: str(item.get("purchaseDate") or ""))
+            items = sorted(
+                items,
+                key=lambda item: self._purchase_timestamp(item) or _epoch,
+            )
             if len(items) < 2:
                 train_purchases.extend(items)
                 continue
@@ -597,6 +708,7 @@ class RecommendationEngine:
         similarity = self._cosine_similarity(matrix)
         popular_scores = self._popularity_scores(train_purchases, interactions, products)
         category_index = self._build_category_index(products)
+        recency_scores = self._recency_scores(train_purchases)
 
         hits = 0
         for user_id, expected_product_id in test_items.items():
@@ -611,6 +723,7 @@ class RecommendationEngine:
                 similarity,
                 popular_scores,
                 category_index,
+                recency_scores=recency_scores,
             )[:k]
             if expected_product_id in {item["productId"] for item in recommended}:
                 hits += 1
